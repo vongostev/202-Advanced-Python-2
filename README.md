@@ -10,24 +10,24 @@
 
 <img style="float: center;" src="https://render.githubusercontent.com/render/math?math=\dfrac{dp}{dt}=F.\quad\quad(2)">
 
-Изменение скорости приводит к искривлению траектории космического объекта. Существует четыре варианта:
-1. Объект падает на звезду
-2. Объект выходит на стабильную эллиптическую орбиту и становится астероидом
-3. Объект выходит на стабильную орбиту в виде конического сечения и становится кометой
-4. Объект уходит из звездной системы
+Изменение скорости приводит к искривлению траектории космического объекта. Космическое тело в поле тяготения звезды может двигаться по орбитам, являющимся коническими сечениями (спасибо за уточнение А. Успенскому), т.е. по эллипсу (эксцентриситет e < 1), параболе (e = 1) и гиперболе (e > 1) (см. [1, стр. 312]). При этом в двух последних случаях тело покидает сферу влияния звезды. Тип орбиты можно определить по кинетической энергии [1, стр. 316]:
+
+<img style="float: center;" src="https://render.githubusercontent.com/render/math?math=E=\dfrac{mv^2}{2}-G\dfrac{mM}{r}=\text{const}\begin{cases}E>0,\text{   гипербола}\\ E=0,\text{  парабола}\\ E<0,\text{  эллипс}\\ \end{cases}.\quad\quad(3)">
+
 Необходимо смоделировать формирование такой звездной системы при случайной инициализации параметров космических объектов. При наличии других тел в системе необходимо учитывать и их влияние на космический объект. Ниже предлагается одна из схем дискретизации задачи.
+
 ### Дискретизация задачи
 Введем дискретную шкалу времени <img src="https://render.githubusercontent.com/render/math?math=t_i">. В момент времени <img src="https://render.githubusercontent.com/render/math?math=t_0"> объект со скоростью <img src="https://render.githubusercontent.com/render/math?math=\vec{v}"> и массой <img src="https://render.githubusercontent.com/render/math?math=m"> генерируется в точке пространства <img src="https://render.githubusercontent.com/render/math?math=P">. В каждый момент времени на него действует сила тяготения (1), в связи с чем его импульс изменяется согласно (2). Учитывая, что <img src="https://render.githubusercontent.com/render/math?math=p=m\vec{v}">, в дискретной шкале времени для произвольно момента времени <img src="https://render.githubusercontent.com/render/math?math=t_i"> можно приблизительно написать:
 
-<img style="float: center;" src="https://render.githubusercontent.com/render/math?math=m\dfrac{\vec{v}_{i+1} - \vec{v}_i}{\Delta t}=G\dfrac{mM}{r_i^2},\quad\quad(3)">
+<img style="float: center;" src="https://render.githubusercontent.com/render/math?math=m\dfrac{\vec{v}_{i+1} - \vec{v}_i}{\Delta t}=G\dfrac{mM}{r_i^2},\quad\quad(4)">
 
 Где <img src="https://render.githubusercontent.com/render/math?math=\Delta t=t_{i+1} - t_i">. Отсюда изменение скорости
 
-<img style="float: center;" src="https://render.githubusercontent.com/render/math?math=\Delta\vec{v}_i=\vec{v}_{i+1}  - \vec{v}_i= G\dfrac{M\Delta t}{r_i^2}.\quad\quad(4)">
+<img style="float: center;" src="https://render.githubusercontent.com/render/math?math=\Delta\vec{v}_i=\vec{v}_{i+1}  - \vec{v}_i= G\dfrac{M\Delta t}{r_i^2}.\quad\quad(5)">
 
-Если объект находится в поле тяготения нескольких тел, то формулу (4) можно обобщить:
+Если объект находится в поле тяготения нескольких тел, то формулу (5) можно обобщить:
 
-<img style="float: center;" src="https://render.githubusercontent.com/render/math?math=\Delta\vec{v}_i= G\sum_k\dfrac{m_k\Delta t}{r_{ik}^2},\quad\quad(5)">
+<img style="float: center;" src="https://render.githubusercontent.com/render/math?math=\Delta\vec{v}_i= G\sum_k\dfrac{m_k\Delta t}{r_{ik}^2},\quad\quad(6)">
 
 где индекс <img src="https://render.githubusercontent.com/render/math?math=k"> соответствует отдельному телу в системе.
 Если на каждом шагу рассчитывать изменение скорости, то можно рассчитать новый радиус-вектор:
@@ -48,3 +48,6 @@
 10. Обобщить код на трехмерный случай, включая тесты
 11. Реализовать отображение трехмерных траекторий объектов
 12. Реализовать анимацию движений объектов в системе
+
+### Литература
+1. Сивухин Д. В. Общий курс физики, т.1. Механика. М.: 1979. 520 с.

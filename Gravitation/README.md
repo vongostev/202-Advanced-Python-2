@@ -33,7 +33,7 @@
 где индекс <img src="https://render.githubusercontent.com/render/math?math=k"> соответствует отдельному телу в системе.
 Если на каждом шагу рассчитывать изменение скорости, то можно рассчитать новый радиус-вектор:
 
-<img style="float: center;" src="https://render.githubusercontent.com/render/math?math=\vec{r}_{i %2B 1}=\vec{r}_i %2B \Delta\vec{v}_i\Delta t.">
+<img style="float: center;" src="https://render.githubusercontent.com/render/math?math=\vec{r}_{i %2B 1}=\vec{r}_i %2B \vec{v}_i\Delta t %2B \Delta\vec{v}_i\Delta t^2/2.">
 
 Таким образом, в дискретном виде возможно смоделировать систему многих тел.
 ### Задания

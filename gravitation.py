@@ -360,7 +360,7 @@ def test6(star, bodies):
             ax.scatter(body.coords[0], body.coords[1], body.coords[2], s=7)
     ani = FuncAnimation(plt.gcf(), animate, interval=100,
                         frames=sim_lim, blit=False)
-    ani.save('C:/Users/timof/Desktop/smthm.mp4')
+    ani.save('grav_anim.mp4')
 
 
     # plt.show()

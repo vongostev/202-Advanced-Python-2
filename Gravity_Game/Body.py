@@ -1,8 +1,7 @@
 import numpy as np
 
 class Body:
-    def __init__(
-            self,
+    def __init__(self,
             position: np.ndarray,
             velocity: np.ndarray,
             mass: float,
@@ -19,3 +18,10 @@ class Body:
             for i in range(tick):
                 log_file.write(f'{i} False 0 0 0 0 0')
             log_file.close()
+    
+    def move(self,
+             acceleration: np.ndarray,
+             tick_length: float):
+        self.position += self.velocity*tick_length + 0.5*acceleration*tick_length
+        self.velocity += acceleration*tick_length
+        

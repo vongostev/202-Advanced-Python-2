@@ -114,3 +114,4 @@ dmypy.json
 .pyre/
 DCT/_process_images_iterative.py
 DCT/_process_images.py
+DCT/_parallel.py

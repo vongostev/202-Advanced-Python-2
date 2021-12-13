@@ -112,6 +112,4 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
-DCT/_process_images_iterative.py
-DCT/_process_images.py
-DCT/_parallel.py
+star_v2.ipynb

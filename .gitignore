@@ -112,3 +112,4 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+star_v2.ipynb

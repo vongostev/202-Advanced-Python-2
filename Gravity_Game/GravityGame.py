@@ -1,10 +1,139 @@
 import numpy as np
-import numba as nb
 from collections import deque
+from time import gmtime, strftime, time
+from os import mkdir
 
-G = 0.1  # Гравитационная постоянная
-tick_length = 1e-2  # Длительность тика - "кванта времени"
 
+class Gravitation:
+    def __init__(self,
+                 G: float = 1,
+                 tick_length: float = 1e-3,
+                 log_dir: str = 'GravityGame_logs'):
+        """
+        Создание движка гравитации с конкретными параметрами.
+
+        Parameters
+        ----------
+        G : float, optional
+            Гравитационная постоянная. The default is 1.
+        tick_length : float, optional
+            Длина тика - "кванта" времени в секундах. The default is 1e-3.
+        log_dir : str, optional
+            Название директории с траекториями. Директория будет расположена
+            по тому же адресу, что и скрипт. The default is 'GravityGame_logs'.
+
+        Returns
+        -------
+        None.
+
+        """
+        self.G = G
+        self.tick_length = tick_length
+        self.log_dir = log_dir
+        mkdir(log_dir)
+    
+    
+    def calculate_acceleration(self,
+                               attractor_mass: float,
+                               attractor_position: np.ndarray,
+                               body_position: np.ndarray) -> np.ndarray:
+        """
+        Вычисляет и возвращает ускорение, вызванное притягивающим телом 
+        (аттрактором) у притягиваемого тела.
+
+        Parameters
+        ----------
+        attractor_mass : float
+            Масса аттрактора.
+        attractor_position : np.ndarray
+            Координаты аттрактора.
+        body_position : np.ndarray
+            Положение притягиваемого тела.
+
+        Returns
+        -------
+        acceleration : np.ndarray
+            Ускорение притягиваемого тела, вызванное аттрактором.
+
+        """
+        distance = attractor_position - body_position
+        return attractor_mass * self.G * distance / np.linalg.norm(distance)**3
+    
+    def gravitate(self):
+        """
+        Выполняет логику одного тика движения тел. Вычисляются ускорения для 
+        всех тел (кроме несуществующих), затем тела перемещаются под действием
+        вычисленных ускорений. После каждого перемещения производится проверка
+        столкновения тела с уже перемещёнными ранее (итерация по индексу 
+        используется, чтобы не затрагивать ещё не перемещённые тела). Если 
+        столкновение произошло, происходит слияние столкнувшихся тел.
+    
+        Parameters
+        ----------
+        None.
+    
+        Returns
+        -------
+        None.
+    
+        """
+        # Вычисление ускорений. Порядковые номера ускорения и соответствующего тела совпадают
+        accelerations = deque()
+        for body in self.bodies:
+            accelerations.append(0.)
+            if body.does_exist:
+                for attractor in [a for a in self.bodies if a != body]:
+                    accelerations[-1] += self.calculate_acceleration(attractor.mass,
+                                                                     attractor.position,
+                                                                     body.position)
+    
+        for b in range(self.bodies_number):
+            # Перемещение тел
+            self.bodies[b].move(accelerations.popleft())
+            for c in range(b):
+                # Проверка на столкновение (не учитываются несуществующие тела)
+                if (self.bodies[b].does_exist * self.bodies[c].does_exist
+                    and self.bodies[c].radius + self.bodies[b].radius
+                        <= np.linalg.norm(self.bodies[b].position - self.bodies[c].position)):
+                    self.bodies[b].merge(self.bodies[c])
+    
+    def create_bodies(self,
+                      properties: list):
+        """
+        Создаёт внутри объекта гравитации список тел с указанными свойствами.
+        Формат списка свойств:
+            properties[0] : np.ndarray - начальное положение тела
+            properties[1] : np.ndarray - начальная скорость тела
+            properties[2] : float - масса тела
+            properties[3] : float - радиус тела
+
+        Parameters
+        ----------
+        properties : list
+            Список свойств тел. Формат указан в описании функции!
+
+        Returns
+        -------
+        None.
+
+        """
+        self.bodies = []
+        self.paths = []
+        for body_props in properties:
+            self.paths.append(f'{self.log_dir}/m{body_props[2]}_r{body_props[3]}_{strftime("%d_%m_%y_%H:%M:%S", gmtime())}_{time()%1e-3*1e9:.0f}.txt')
+            self.bodies.append(Body(body_props[0],
+                                    body_props[1],
+                                    body_props[2],
+                                    body_props[3],
+                                    self.paths[-1]))
+        self.bodies_number = len(self.bodies)
+    
+    
+    def simulate_trajectories(self,
+                              simulation_time: float) -> list:
+        N = int(simulation_time / self.tick_length)
+        for t in range(N):
+            self.gravitate()
 
 class Body:
     def __init__(self,
@@ -44,14 +173,10 @@ class Body:
         f = open(log_path, 'w')
         f.close()
         self.does_exist = 1
-        # if tick > 0:
-        #     log_file = open(log_path, 'a')
-        #     for i in range(tick):
-        #         log_file.write(f'0 0.0 0.0 {np.zeros_like(position)}')
-        #     log_file.close()
 
     def move(self,
-             acceleration: np.ndarray,):
+             acceleration: np.ndarray,
+             tick_length: float):
         """
         Записывает в файл траектории строку с характеристиками тела в формате:
         'Флаг_существования Радиус [Координаты через пробел]'
@@ -62,6 +187,8 @@ class Body:
         ----------
         acceleration : np.ndarray
             Ускорение, действующее на тело.
+        tick_length : float
+            Длина тика в секундах.
 
         Returns
         -------
@@ -120,69 +247,9 @@ class Body:
         other_body.destroy()
 
 
-@nb.njit('float64[:](float64, float64[:], float64[:])', cache=True, nogil=False,
-         fastmath=True, parallel=True)
-def calculate_acceleration(attractor_mass: float,
-                           attractor_position: np.ndarray,
-                           body_position: np.ndarray) -> np.ndarray:
-    """
-    Вычисляет и возвращает ускорение, вызванное притягивающим телом (аттрактором)
-    у притягиваемого тела.
-
-    Parameters
-    ----------
-    attractor_mass : float
-        Масса аттрактора.
-    attractor_position : np.ndarray
-        Координаты аттрактора.
-    body_position : np.ndarray
-        Положение притягиваемого тела.
-
-    Returns
-    -------
-    acceleration : np.ndarray
-        Ускорение притягиваемого тела, вызванное аттрактором.
-
-    """
-    distance = attractor_position - body_position
-    return attractor_mass * G * distance / np.linalg.norm(distance)**3
 
 
-def gravitate(bodies: list):
-    """
-    Выполняет логику одного тика движения тел. Вычисляются ускорения для всех
-    тел из списка (кроме несуществующих), затем тела перемещаются под действием
-    вычисленных ускорений. После каждого перемещения производится проверка
-    столкновения тела с уже перемещёнными ранее (итерация по индексу используется,
-    чтобы не затрагивать ещё не перемещённые тела). Если столкновение произошло,
-    происходит слияние столкнувшихся тел.
 
-    Parameters
-    ----------
-    bodies : list
-        Список тел, участвующих в гравитационном взаимодействии.
 
-    Returns
-    -------
-    None.
 
-    """
-    # Вычисление ускорений. Порядковые номера ускорения и соответствующего тела совпадают
-    accelerations = deque()
-    for body in bodies:
-        accelerations.append(0.)
-        if body.does_exist:
-            for attractor in [a for a in bodies if a != body]:
-                accelerations[-1] += calculate_acceleration(attractor.mass,
-                                                            attractor.position,
-                                                            body.position)
 
-    for b in range(len(bodies)):
-        # Перемещение тел
-        bodies[b].move(accelerations.popleft())
-        for c in range(b):
-            # Проверка на столкновение (не учитываются несуществующие тела)
-            if (bodies[b].does_exist*bodies[c].does_exist
-                and bodies[c].radius + bodies[b].radius
-                    <= np.linalg.norm(bodies[b].position - bodies[c].position)):
-                bodies[b].merge(bodies[c])

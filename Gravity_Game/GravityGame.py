@@ -31,8 +31,7 @@ class Gravitation:
         self.tick_length = tick_length
         self.log_dir = log_dir
         mkdir(log_dir)
-    
-    
+
     def calculate_acceleration(self,
                                attractor_mass: float,
                                attractor_position: np.ndarray,
@@ -58,7 +57,7 @@ class Gravitation:
         """
         distance = attractor_position - body_position
         return attractor_mass * self.G * distance / np.linalg.norm(distance)**3
-    
+
     def gravitate(self):
         """
         Выполняет логику одного тика движения тел. Вычисляются ускорения для 
@@ -86,7 +85,7 @@ class Gravitation:
                     accelerations[-1] += self.calculate_acceleration(attractor.mass,
                                                                      attractor.position,
                                                                      body.position)
-    
+
         for b in range(self.bodies_number):
             # Перемещение тел
             self.bodies[b].move(accelerations.popleft())
@@ -96,7 +95,7 @@ class Gravitation:
                     and self.bodies[c].radius + self.bodies[b].radius
                         <= np.linalg.norm(self.bodies[b].position - self.bodies[c].position)):
                     self.bodies[b].merge(self.bodies[c])
-    
+
     def create_bodies(self,
                       properties: list):
         """
@@ -120,20 +119,35 @@ class Gravitation:
         self.bodies = []
         self.paths = []
         for body_props in properties:
-            self.paths.append(f'{self.log_dir}/m{body_props[2]}_r{body_props[3]}_{strftime("%d_%m_%y_%H:%M:%S", gmtime())}_{time()%1e-3*1e9:.0f}.txt')
+            self.paths.append(
+                f'{self.log_dir}/m{body_props[2]}_r{body_props[3]}_{strftime("%d_%m_%y_%H:%M:%S", gmtime())}_{time()%1e-3*1e9:.0f}.txt')
             self.bodies.append(Body(body_props[0],
                                     body_props[1],
                                     body_props[2],
                                     body_props[3],
                                     self.paths[-1]))
         self.bodies_number = len(self.bodies)
-    
-    
+
     def simulate_trajectories(self,
-                              simulation_time: float) -> list:
+                              simulation_time: float):
+        """
+        Запускает симулицию в течение указанного времени (если укладывается 
+        нецелое число тиков, округление вниз)
+
+        Parameters
+        ----------
+        simulation_time : float
+            Время симуляции.
+
+        Returns
+        -------
+        None.
+
+        """
         N = int(simulation_time / self.tick_length)
         for t in range(N):
             self.gravitate()
+
 
 class Body:
     def __init__(self,
@@ -173,6 +187,31 @@ class Body:
         f = open(log_path, 'w')
         f.close()
         self.does_exist = 1
+
+    @classmethod
+    def read_trajectory(file_name: str) -> list:
+        """
+        Генератор информации о траектории из получаемого файла. Конвертирует
+        траекторию по шаблону в список характеристик тела.
+
+        Parameters
+        ----------
+        file_name : str
+            Путь к файлу с траекторией.
+
+        Yields
+        ------
+        list
+            Свойства тела в конкретный тик в формате [does_exist, radius, position].
+
+        """
+        with open(file_name) as trajectory:
+            for moment in trajectory:
+                moment = deque(moment.split(' ['))
+                moment[1] = np.ndarray(moment[1].rstrip(']').split())
+                moment.appendleft(moment[0].split()[0])
+                moment[1] = moment[1].split()[1]
+                yield list(moment)
 
     def move(self,
              acceleration: np.ndarray,
@@ -245,11 +284,3 @@ class Body:
         self.mass += other_body.mass
         self.radius = (self.radius**3 + other_body.radius**3)**(1/3)
         other_body.destroy()
-
-
-
-
-
-
-
-

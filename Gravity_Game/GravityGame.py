@@ -2,6 +2,7 @@ import numpy as np
 from collections import deque
 from time import gmtime, strftime, time
 from os import mkdir
+import unittest
 
 
 class Gravitation:
@@ -234,10 +235,10 @@ class Body:
         None.
 
         """
-        log_file = open(self.log_path, 'a')
-        log_file.write(
-            f'{self.does_exist} {self.radius} {self.position}')
-        log_file.close()
+        with open(self.log_path, 'a') as log_file:
+            log_file.write(
+                f'{self.does_exist} {self.radius} {self.position}\n')
+        
         self.position += self.velocity * tick_length \
             + 0.5 * acceleration * tick_length**2
         self.velocity += acceleration * tick_length
@@ -284,3 +285,29 @@ class Body:
         self.mass += other_body.mass
         self.radius = (self.radius**3 + other_body.radius**3)**(1/3)
         other_body.destroy()
+
+
+class TestBodyMethods(unittest.TestCase):
+    def test_init(self):
+        body = Body(np.arange(3), np.arange(3), 3., 2., 'test_body.txt')
+        self.assertEqual(body.position.all(), np.arange(3).all())
+        self.assertEqual(body.velocity.all(), np.arange(3).all())
+        self.assertEqual(body.mass, 3.)
+        self.assertEqual(body.radius, 2.)
+        self.assertEqual(body.log_path, 'test_body.txt')
+        self.assertEqual(body.does_exist, 1, 'Body created correctly')
+        
+    def test_move(self):
+        body = Body(np.array([0., 1., 2.]), np.array([1., 2., 3.]), 3., 2., 'test_body.txt')
+        body.move(np.zeros(3), 1.)
+        self.assertEqual(body.position.all(), np.array([1., 3., 5.]).all(), 'No acceleration: Position changing')
+        self.assertEqual(body.velocity.all(), np.array([1., 2., 3.]).all(), 'No acceleration: Velocity not changing')
+        body.move(np.array([-1., 0., 1.]), 1.)
+        self.assertEqual(body.position.all(), np.array([1.5, 5., 8.5]).all(), 'With acceleration: Position changing')
+        self.assertEqual(body.velocity.all(), np.array([0., 2., 4.]).all(), 'With acceleration: Velocity changing')
+        with open('test_body.txt', 'r') as log_file:
+            self.assertEqual(log_file.readline(), '1 2.0 [0. 1. 2.]\n', 'No acceleration: Log written')
+            self.assertEqual(log_file.readline(), '1 2.0 [1. 3. 5.]\n', 'With acceleration: Log written')
+
+if __name__ == '__main__':
+    unittest.main()

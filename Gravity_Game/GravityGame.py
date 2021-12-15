@@ -31,6 +31,7 @@ def read_trajectory(file_path: str) -> list:
             moment[1] = float(moment[1].split()[1])
             yield list(moment)
 
+
 @nb.njit('float64[:](float64, float64[:], float64[:], float64)', cache=True,
          nogil=False, fastmath=True, parallel=True)
 def calculate_acceleration(attractor_mass: float,
@@ -253,8 +254,8 @@ class Body:
 
     def destroy(self):
         """
-        Уничтожает тело: меняет значение флага does_exist на 0 и обнуляет все
-        характеристики тела. Траектория при этом не удаляется и записывается далее.
+        Уничтожает тело: меняет значение флага does_exist на 0 и обнуляет массу,
+        радиус и скорость тела. Траектория при этом не удаляется.
 
         Returns
         -------
@@ -264,8 +265,8 @@ class Body:
         self.mass = 0
         self.radius = 0
         self.does_exist = 0
-        self.position = np.zeros_like(self.position)
-        self.velocity = np.zeros_like(self.position)
+        #self.position = np.zeros_like(self.position)
+        self.velocity = np.zeros_like(self.velocity)
 
     def merge(self,
               other_body):
@@ -298,32 +299,55 @@ class Body:
 class TestBodyMethods(unittest.TestCase):
     def test_init(self):
         body = Body(np.arange(3), np.arange(3), 3., 2., 'test_body.txt')
-        self.assertEqual(body.position.all(), np.arange(3).all())
-        self.assertEqual(body.velocity.all(), np.arange(3).all())
+        self.assertEqual(body.position.tolist(), [0., 1., 2.])
+        self.assertEqual(body.velocity.tolist(), [0., 1., 2.])
         self.assertEqual(body.mass, 3.)
         self.assertEqual(body.radius, 2.)
         self.assertEqual(body.log_path, 'test_body.txt')
-        self.assertEqual(body.does_exist, 1, 'Body created correctly')
+        self.assertEqual(body.does_exist, 1)
 
     def test_move(self):
         body = Body(np.array([0., 1., 2.]),
                     np.array([1., 2., 3.]),
                     3., 2., 'test_body.txt')
         body.move(np.zeros(3), 1.)
-        self.assertEqual(body.position.all(), np.array([1., 3., 5.]).all(),
-                         msg='No acceleration: Position change error')
-        self.assertEqual(body.velocity.all(), np.array([1., 2., 3.]).all(),
-                         msg='No acceleration: Velocity not changing error')
+        self.assertEqual(body.position.tolist(), [1., 3., 5.])
+        self.assertEqual(body.velocity.tolist(), [1., 2., 3.])
         body.move(np.array([-1., 0., 1.]), 1.)
-        self.assertEqual(body.position.all(), np.array([1.5, 5., 8.5]).all(),
-                         msg='With acceleration: Position change error')
-        self.assertEqual(body.velocity.all(), np.array([0., 2., 4.]).all(),
-                         msg='With acceleration: Velocity change error')
+        self.assertEqual(body.position.tolist(), [1.5, 5., 8.5])
+        self.assertEqual(body.velocity.tolist(), [0., 2., 4.])
         with open('test_body.txt', 'r') as log_file:
-            self.assertEqual(log_file.readline(), '1 2.0 [0. 1. 2.]\n',
-                             msg='No acceleration: Log writing error')
-            self.assertEqual(log_file.readline(), '1 2.0 [1. 3. 5.]\n',
-                             msg='With acceleration: Log writing error')
+            self.assertEqual(log_file.readline(), '1 2.0 [0. 1. 2.]\n')
+            self.assertEqual(log_file.readline(), '1 2.0 [1. 3. 5.]\n')
+
+    def test_destroy(self):
+        body = Body(np.array([0., 1., 2.]),
+                    np.array([1., 2., 3.]),
+                    3., 2., 'test_body.txt')
+        body.destroy()
+        self.assertEqual(body.position.tolist(), [0., 1., 2.])
+        self.assertEqual(body.velocity.tolist(), [0., 0., 0.])
+        self.assertEqual(body.mass, 0)
+        self.assertEqual(body.radius, 0)
+
+    def test_merge(self):
+        body_1 = Body(np.array([0., 1., 2.]),
+                      np.array([1., 2., 3.]),
+                      3., 2., 'test_body.txt')
+        body_2 = Body(np.array([1., 2., 3.]),
+                      np.array([-1., -2., -3.]),
+                      3., 2., 'test_body.txt')
+        body_1.merge(body_2)
+        # body_2 is destroyed
+        self.assertEqual(body_2.position.tolist(), [1., 2., 3.])
+        self.assertEqual(body_2.velocity.tolist(), [0., 0., 0.])
+        self.assertEqual(body_2.mass, 0)
+        self.assertEqual(body_2.radius, 0)
+        # body_1 is merged
+        self.assertEqual(body_1.position.tolist(), [0.5, 1.5, 2.5])
+        self.assertEqual(body_1.velocity.tolist(), [0., 0., 0.])
+        self.assertEqual(body_1.mass, 6.)
+        self.assertAlmostEqual(body_1.radius, 2.52, delta=0.002)
 
 
 class TestFunctions(unittest.TestCase):
@@ -334,11 +358,16 @@ class TestFunctions(unittest.TestCase):
         body.move(np.zeros(3), 1.)
         body.move(np.array([-1., 0., 1.]), 1.)
         trajectory = read_trajectory('test_body.txt')
-        positions = [np.array([0., 1., 2.]), np.array([1., 3., 5.])]
+        positions = [[0., 1., 2.], [1., 3., 5.]]
         for i, moment in enumerate(trajectory):
-            self.assertEqual(moment[0:2], [1, 2.],
-                             msg='existance or radius decoding error')
-            self.assertEqual(moment[2].all(), positions[i].all())
+            self.assertEqual(moment[0:2], [1, 2.])
+            self.assertEqual(moment[2].tolist(), positions[i])
+            
+    def test_calculate_acceleration(self):
+        self.assertTrue(np.allclose(
+            calculate_acceleration(7., np.array([1., 1., 1.]), 
+                                   np.array([3., 4., 7.]), 
+                                   0.49),  np.array([-0.02, -0.03, -0.06])))
 
 
 if __name__ == '__main__':

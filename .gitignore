@@ -113,3 +113,6 @@ dmypy.json
 # Pyre type checker
 .pyre/
 star_v2.ipynb
+Gravitation/gordeev.py
+Gravitation/grav_anim.mp4
+play.ipynb

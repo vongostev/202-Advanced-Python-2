@@ -136,8 +136,8 @@ class Gravitation:
         """
         Создаёт внутри объекта гравитации список тел с указанными свойствами.
         Формат списка свойств:
-            properties[0] : np.ndarray - начальное положение тела
-            properties[1] : np.ndarray - начальная скорость тела
+            properties[0] : np.ndarray - начальное положение тела (массив из float64)
+            properties[1] : np.ndarray - начальная скорость тела (массив из float64)
             properties[2] : float - масса тела
             properties[3] : float - радиус тела
 
@@ -296,6 +296,8 @@ class Body:
         other_body.destroy()
 
 
+### Тесты ###
+
 class TestBodyMethods(unittest.TestCase):
     def test_init(self):
         body = Body(np.arange(3), np.arange(3), 3., 2., 'test_body.txt')
@@ -347,8 +349,11 @@ class TestBodyMethods(unittest.TestCase):
         self.assertEqual(body_1.position.tolist(), [0.5, 1.5, 2.5])
         self.assertEqual(body_1.velocity.tolist(), [0., 0., 0.])
         self.assertEqual(body_1.mass, 6.)
-        self.assertAlmostEqual(body_1.radius, 2.52, delta=0.002)
+        self.assertAlmostEqual(body_1.radius, 2.52, delta=0.001)
 
+
+class TestGravitationMethods(unittest.TestCase):
+    pass # Work in progress
 
 class TestFunctions(unittest.TestCase):
     def test_read_trajectory(self):
@@ -362,11 +367,11 @@ class TestFunctions(unittest.TestCase):
         for i, moment in enumerate(trajectory):
             self.assertEqual(moment[0:2], [1, 2.])
             self.assertEqual(moment[2].tolist(), positions[i])
-            
+
     def test_calculate_acceleration(self):
         self.assertTrue(np.allclose(
-            calculate_acceleration(7., np.array([1., 1., 1.]), 
-                                   np.array([3., 4., 7.]), 
+            calculate_acceleration(7., np.array([1., 1., 1.]),
+                                   np.array([3., 4., 7.]),
                                    0.49),  np.array([-0.02, -0.03, -0.06])))
 
 

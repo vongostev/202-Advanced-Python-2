@@ -1,8 +1,65 @@
 import numpy as np
+import numba as nb
 from collections import deque
 from time import gmtime, strftime, time
 from os import mkdir
 import unittest
+
+
+def read_trajectory(file_path: str) -> list:
+    """
+    Генератор информации о траектории из получаемого файла. Конвертирует
+    траекторию по шаблону в список характеристик тела.
+
+    Parameters
+    ----------
+    file_path : str
+        Путь к файлу с траекторией.
+
+    Yields
+    ------
+    list
+        Свойства тела в конкретный тик в формате [does_exist, radius, position].
+
+    """
+    with open(file_path) as trajectory:
+        for moment in trajectory:
+            moment = deque(moment.split(' ['))
+            moment[1] = np.array([float(a)
+                                 for a in moment[1].rstrip(']\n').split()])
+            moment.appendleft(int(moment[0].split()[0]))
+            moment[1] = float(moment[1].split()[1])
+            yield list(moment)
+
+@nb.njit('float64[:](float64, float64[:], float64[:], float64)', cache=True,
+         nogil=False, fastmath=True, parallel=True)
+def calculate_acceleration(attractor_mass: float,
+                           attractor_position: np.ndarray,
+                           body_position: np.ndarray,
+                           G: float) -> np.ndarray:
+    """
+    Вычисляет и возвращает ускорение, вызванное притягивающим телом 
+    (аттрактором) у притягиваемого тела.
+
+    Parameters
+    ----------
+    attractor_mass : float
+        Масса аттрактора.
+    attractor_position : np.ndarray
+        Координаты аттрактора.
+    body_position : np.ndarray
+        Положение притягиваемого тела.
+    G : float
+        Гравитационная постоянная
+
+    Returns
+    -------
+    acceleration : np.ndarray
+        Ускорение притягиваемого тела, вызванное аттрактором.
+
+    """
+    distance = attractor_position - body_position
+    return attractor_mass * G * distance / np.linalg.norm(distance)**3
 
 
 class Gravitation:
@@ -33,32 +90,6 @@ class Gravitation:
         self.log_dir = log_dir
         mkdir(log_dir)
 
-    def calculate_acceleration(self,
-                               attractor_mass: float,
-                               attractor_position: np.ndarray,
-                               body_position: np.ndarray) -> np.ndarray:
-        """
-        Вычисляет и возвращает ускорение, вызванное притягивающим телом 
-        (аттрактором) у притягиваемого тела.
-
-        Parameters
-        ----------
-        attractor_mass : float
-            Масса аттрактора.
-        attractor_position : np.ndarray
-            Координаты аттрактора.
-        body_position : np.ndarray
-            Положение притягиваемого тела.
-
-        Returns
-        -------
-        acceleration : np.ndarray
-            Ускорение притягиваемого тела, вызванное аттрактором.
-
-        """
-        distance = attractor_position - body_position
-        return attractor_mass * self.G * distance / np.linalg.norm(distance)**3
-
     def gravitate(self):
         """
         Выполняет логику одного тика движения тел. Вычисляются ускорения для 
@@ -67,25 +98,27 @@ class Gravitation:
         столкновения тела с уже перемещёнными ранее (итерация по индексу 
         используется, чтобы не затрагивать ещё не перемещённые тела). Если 
         столкновение произошло, происходит слияние столкнувшихся тел.
-    
+
         Parameters
         ----------
         None.
-    
+
         Returns
         -------
         None.
-    
+
         """
         # Вычисление ускорений. Порядковые номера ускорения и соответствующего тела совпадают
         accelerations = deque()
         for body in self.bodies:
             accelerations.append(0.)
             if body.does_exist:
-                for attractor in [a for a in self.bodies if a != body]:
-                    accelerations[-1] += self.calculate_acceleration(attractor.mass,
-                                                                     attractor.position,
-                                                                     body.position)
+                for attractor in self.bodies:
+                    if attractor != body:
+                        accelerations[-1] += self.calculate_acceleration(attractor.mass,
+                                                                         attractor.position,
+                                                                         body.position,
+                                                                         self.G)
 
         for b in range(self.bodies_number):
             # Перемещение тел
@@ -189,31 +222,6 @@ class Body:
         f.close()
         self.does_exist = 1
 
-    @classmethod
-    def read_trajectory(file_name: str) -> list:
-        """
-        Генератор информации о траектории из получаемого файла. Конвертирует
-        траекторию по шаблону в список характеристик тела.
-
-        Parameters
-        ----------
-        file_name : str
-            Путь к файлу с траекторией.
-
-        Yields
-        ------
-        list
-            Свойства тела в конкретный тик в формате [does_exist, radius, position].
-
-        """
-        with open(file_name) as trajectory:
-            for moment in trajectory:
-                moment = deque(moment.split(' ['))
-                moment[1] = np.ndarray(moment[1].rstrip(']').split())
-                moment.appendleft(moment[0].split()[0])
-                moment[1] = moment[1].split()[1]
-                yield list(moment)
-
     def move(self,
              acceleration: np.ndarray,
              tick_length: float):
@@ -238,7 +246,7 @@ class Body:
         with open(self.log_path, 'a') as log_file:
             log_file.write(
                 f'{self.does_exist} {self.radius} {self.position}\n')
-        
+
         self.position += self.velocity * tick_length \
             + 0.5 * acceleration * tick_length**2
         self.velocity += acceleration * tick_length
@@ -296,18 +304,42 @@ class TestBodyMethods(unittest.TestCase):
         self.assertEqual(body.radius, 2.)
         self.assertEqual(body.log_path, 'test_body.txt')
         self.assertEqual(body.does_exist, 1, 'Body created correctly')
-        
+
     def test_move(self):
-        body = Body(np.array([0., 1., 2.]), np.array([1., 2., 3.]), 3., 2., 'test_body.txt')
+        body = Body(np.array([0., 1., 2.]),
+                    np.array([1., 2., 3.]),
+                    3., 2., 'test_body.txt')
         body.move(np.zeros(3), 1.)
-        self.assertEqual(body.position.all(), np.array([1., 3., 5.]).all(), 'No acceleration: Position changing')
-        self.assertEqual(body.velocity.all(), np.array([1., 2., 3.]).all(), 'No acceleration: Velocity not changing')
+        self.assertEqual(body.position.all(), np.array([1., 3., 5.]).all(),
+                         msg='No acceleration: Position change error')
+        self.assertEqual(body.velocity.all(), np.array([1., 2., 3.]).all(),
+                         msg='No acceleration: Velocity not changing error')
         body.move(np.array([-1., 0., 1.]), 1.)
-        self.assertEqual(body.position.all(), np.array([1.5, 5., 8.5]).all(), 'With acceleration: Position changing')
-        self.assertEqual(body.velocity.all(), np.array([0., 2., 4.]).all(), 'With acceleration: Velocity changing')
+        self.assertEqual(body.position.all(), np.array([1.5, 5., 8.5]).all(),
+                         msg='With acceleration: Position change error')
+        self.assertEqual(body.velocity.all(), np.array([0., 2., 4.]).all(),
+                         msg='With acceleration: Velocity change error')
         with open('test_body.txt', 'r') as log_file:
-            self.assertEqual(log_file.readline(), '1 2.0 [0. 1. 2.]\n', 'No acceleration: Log written')
-            self.assertEqual(log_file.readline(), '1 2.0 [1. 3. 5.]\n', 'With acceleration: Log written')
+            self.assertEqual(log_file.readline(), '1 2.0 [0. 1. 2.]\n',
+                             msg='No acceleration: Log writing error')
+            self.assertEqual(log_file.readline(), '1 2.0 [1. 3. 5.]\n',
+                             msg='With acceleration: Log writing error')
+
+
+class TestFunctions(unittest.TestCase):
+    def test_read_trajectory(self):
+        body = Body(np.array([0., 1., 2.]),
+                    np.array([1., 2., 3.]),
+                    3., 2., 'test_body.txt')
+        body.move(np.zeros(3), 1.)
+        body.move(np.array([-1., 0., 1.]), 1.)
+        trajectory = read_trajectory('test_body.txt')
+        positions = [np.array([0., 1., 2.]), np.array([1., 3., 5.])]
+        for i, moment in enumerate(trajectory):
+            self.assertEqual(moment[0:2], [1, 2.],
+                             msg='existance or radius decoding error')
+            self.assertEqual(moment[2].all(), positions[i].all())
+
 
 if __name__ == '__main__':
     unittest.main()

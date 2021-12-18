@@ -3,7 +3,6 @@ import matplotlib.pyplot as plt
 import random
 from mpl_toolkits import mplot3d
 
-#G = 6.6743e-11
 G = 0.1
 dt = 0.01
 

@@ -4,6 +4,8 @@ from collections import deque
 from time import gmtime, strftime, time
 from os import mkdir
 import unittest
+import matplotlib.pyplot as plt
+from tqdm import tqdm
 
 
 def read_trajectory(file_path: str) -> list:
@@ -31,6 +33,8 @@ def read_trajectory(file_path: str) -> list:
             moment[1] = float(moment[1].split()[1])
             yield list(moment)
 
+
+        
 
 @nb.njit('float64[:](float64, float64[:], float64[:], float64)', cache=True,
          nogil=False, fastmath=True, parallel=True)
@@ -61,6 +65,55 @@ def calculate_acceleration(attractor_mass: float,
     """
     distance = attractor_position - body_position
     return attractor_mass * G * distance / np.linalg.norm(distance)**3
+
+
+@nb.njit('float64[:](float64[:], float64[:], float64)', cache=True,
+         nogil=False, fastmath=True, parallel=True)
+def calculate_position_change(velocity: np.ndarray,
+                              acceleration: np.ndarray,
+                              tick_length: float) -> np.ndarray:
+    """
+    Вычисляет изменение координат тела по просшествии одного тика
+
+    Parameters
+    ----------
+    velocity : np.ndarray
+        Скорость движения.
+    acceleration : np.ndarray
+        Ускорение.
+    tick_length : float
+        Длительность тика.
+
+    Returns
+    -------
+    np.ndarray
+        Изменение положения тела.
+
+    """
+    return velocity * tick_length + 0.5 * acceleration * tick_length**2
+
+
+@nb.njit('float64[:](float64[:], float64)', cache=True,
+         nogil=False, fastmath=True, parallel=True)
+def calculate_velocity_change(acceleration: np.ndarray,
+                              tick_length: float) -> np.ndarray:
+    """
+    Вычисляет изменение скорости по просшествии одного тика
+
+    Parameters
+    ----------
+    acceleration : np.ndarray
+        Ускорение.
+    tick_length : float
+        Длительность тика.
+
+    Returns
+    -------
+    np.ndarray
+        Изменение скорости.
+
+    """
+    return acceleration*tick_length
 
 
 class Gravitation:
@@ -128,7 +181,7 @@ class Gravitation:
                 # Проверка на столкновение (не учитываются несуществующие тела)
                 if (self.bodies[b].does_exist * self.bodies[c].does_exist
                     and self.bodies[c].radius + self.bodies[b].radius
-                        <= np.linalg.norm(self.bodies[b].position - self.bodies[c].position)):
+                        >= np.linalg.norm(self.bodies[b].position - self.bodies[c].position)):
                     self.bodies[b].merge(self.bodies[c])
 
     def create_bodies(self,
@@ -136,10 +189,10 @@ class Gravitation:
         """
         Создаёт внутри объекта гравитации список тел с указанными свойствами.
         Формат списка свойств:
-            properties[0] : np.ndarray - начальное положение тела (массив из float64)
-            properties[1] : np.ndarray - начальная скорость тела (массив из float64)
-            properties[2] : float - масса тела
-            properties[3] : float - радиус тела
+            properties[i][0] : np.ndarray - начальное положение тела (массив из float64)
+            properties[i][1] : np.ndarray - начальная скорость тела (массив из float64)
+            properties[i][2] : float - масса тела
+            properties[i][3] : float - радиус тела
 
         Parameters
         ----------
@@ -179,9 +232,53 @@ class Gravitation:
         None.
 
         """
-        N = int(simulation_time / self.tick_length)
-        for t in range(N):
+        self.simulation_time = simulation_time
+        self.N = int(simulation_time / self.tick_length)
+        for t in range(self.N):
             self.gravitate()
+
+    def animate_trajectories(self,
+                             history_length: int = 500):
+        fig = plt.figure(figsize=(5, 5))
+        # Добавляем на нее объект Axes3D для отображения графиков в 3D
+        ax = fig.add_subplot(111, projection='3d')
+        # Задаем границы
+        ax.axes.set_xlim3d(-10, 10)
+        ax.axes.set_ylim3d(-10, 10)
+        ax.axes.set_zlim3d(-8, 8)
+
+        # Отображаем пустую фигуру
+        fig.show()
+        fig.canvas.draw()
+
+        bodies_trajetories = [deque(maxlen=history_length)
+                              for i in range(self.bodies_number)]
+
+        for t in tqdm(np.arange(0., self.simulation_time, self.tick_length)):
+            angle = 60 + 60 * self.simulation_time / self.tick_length
+            # Удаляем графики, отображенные на предыдущем шаге
+            ax.clear()
+            # Задаем границы, потому что они скидываются на дефолтные
+            ax.axes.set_xlim3d(-10, 10)
+            ax.axes.set_ylim3d(-10, 10)
+            ax.axes.set_zlim3d(-8, 8)
+
+            for i, path in enumerate(self.paths):
+                bodies_trajetories[i].appendleft(next(read_trajectory(path)))
+            
+            for trajectory in bodies_trajetories:
+                moment = trajectory[0]
+                if moment[0]:
+                    ax.scatter(moment[2][0], moment[2][1], moment[2][2], s = moment[1])
+                
+                ax.plot(np.array(trajectory[:][2][0]), 
+                        np.array(trajectory[:][2][1]),
+                        np.array(trajectory[:][2][3]), '.-')
+            
+            # Изменяем угол отображения графика
+            ax.view_init(30 - angle * 0.2, angle)
+            # Перерисовываем фигуру
+            fig.canvas.draw()
 
 
 class Body:
@@ -214,10 +311,10 @@ class Body:
         None.
 
         """
-        self.position = position
-        self.velocity = velocity
-        self.mass = mass
-        self.radius = radius
+        self.position = position.astype(float)
+        self.velocity = velocity.astype(float)
+        self.mass = float(mass)
+        self.radius = float(radius)
         self.log_path = log_path
         f = open(log_path, 'w')
         f.close()
@@ -248,9 +345,9 @@ class Body:
             log_file.write(
                 f'{self.does_exist} {self.radius} {self.position}\n')
 
-        self.position += self.velocity * tick_length \
-            + 0.5 * acceleration * tick_length**2
-        self.velocity += acceleration * tick_length
+        self.position += calculate_position_change(
+            self.velocity, acceleration, tick_length)
+        self.velocity += calculate_velocity_change(acceleration, tick_length)
 
     def destroy(self):
         """
@@ -265,7 +362,6 @@ class Body:
         self.mass = 0
         self.radius = 0
         self.does_exist = 0
-        #self.position = np.zeros_like(self.position)
         self.velocity = np.zeros_like(self.velocity)
 
     def merge(self,
@@ -300,80 +396,78 @@ class Body:
 
 class TestBodyMethods(unittest.TestCase):
     def test_init(self):
-        body = Body(np.arange(3), np.arange(3), 3., 2., 'test_body.txt')
-        self.assertEqual(body.position.tolist(), [0., 1., 2.])
-        self.assertEqual(body.velocity.tolist(), [0., 1., 2.])
-        self.assertEqual(body.mass, 3.)
-        self.assertEqual(body.radius, 2.)
+        body = Body(np.arange(3), np.arange(3), 3, 2, 'test_body.txt')
+        self.assertEqual(body.position.tolist(), [0, 1, 2])
+        self.assertEqual(body.velocity.tolist(), [0, 1, 2])
+        self.assertEqual(body.mass, 3)
+        self.assertEqual(body.radius, 2)
         self.assertEqual(body.log_path, 'test_body.txt')
         self.assertEqual(body.does_exist, 1)
 
     def test_move(self):
-        body = Body(np.array([0., 1., 2.]),
-                    np.array([1., 2., 3.]),
-                    3., 2., 'test_body.txt')
+        body = Body(np.arange(3),
+                    np.arange(3)+1,
+                    3, 2, 'test_body.txt')
         body.move(np.zeros(3), 1.)
-        self.assertEqual(body.position.tolist(), [1., 3., 5.])
-        self.assertEqual(body.velocity.tolist(), [1., 2., 3.])
+        self.assertEqual(body.position.tolist(), [1, 3, 5])
+        self.assertEqual(body.velocity.tolist(), [1, 2, 3])
         body.move(np.array([-1., 0., 1.]), 1.)
-        self.assertEqual(body.position.tolist(), [1.5, 5., 8.5])
-        self.assertEqual(body.velocity.tolist(), [0., 2., 4.])
+        self.assertEqual(body.position.tolist(), [1.5, 5, 8.5])
+        self.assertEqual(body.velocity.tolist(), [0, 2, 4])
         with open('test_body.txt', 'r') as log_file:
             self.assertEqual(log_file.readline(), '1 2.0 [0. 1. 2.]\n')
             self.assertEqual(log_file.readline(), '1 2.0 [1. 3. 5.]\n')
 
     def test_destroy(self):
-        body = Body(np.array([0., 1., 2.]),
-                    np.array([1., 2., 3.]),
-                    3., 2., 'test_body.txt')
+        body = Body(np.arange(3),
+                    np.arange(3)+1,
+                    3, 2, 'test_body.txt')
         body.destroy()
-        self.assertEqual(body.position.tolist(), [0., 1., 2.])
-        self.assertEqual(body.velocity.tolist(), [0., 0., 0.])
+        self.assertEqual(body.position.tolist(), [0, 1, 2])
+        self.assertEqual(body.velocity.tolist(), [0, 0, 0])
         self.assertEqual(body.mass, 0)
         self.assertEqual(body.radius, 0)
 
     def test_merge(self):
-        body_1 = Body(np.array([0., 1., 2.]),
-                      np.array([1., 2., 3.]),
-                      3., 2., 'test_body.txt')
-        body_2 = Body(np.array([1., 2., 3.]),
-                      np.array([-1., -2., -3.]),
-                      3., 2., 'test_body.txt')
+        body_1 = Body(np.arange(3),
+                      np.arange(3)+1,
+                      3, 2, 'test_body_1.txt')
+        body_2 = Body(np.array([1, 2, 3]),
+                      np.array([-1, -2, -3]),
+                      3, 2, 'test_body_2.txt')
         body_1.merge(body_2)
         # body_2 is destroyed
-        self.assertEqual(body_2.position.tolist(), [1., 2., 3.])
-        self.assertEqual(body_2.velocity.tolist(), [0., 0., 0.])
+        self.assertEqual(body_2.position.tolist(), [1, 2, 3])
+        self.assertEqual(body_2.velocity.tolist(), [0, 0, 0])
         self.assertEqual(body_2.mass, 0)
         self.assertEqual(body_2.radius, 0)
         # body_1 is merged
         self.assertEqual(body_1.position.tolist(), [0.5, 1.5, 2.5])
-        self.assertEqual(body_1.velocity.tolist(), [0., 0., 0.])
-        self.assertEqual(body_1.mass, 6.)
+        self.assertEqual(body_1.velocity.tolist(), [0, 0, 0])
+        self.assertEqual(body_1.mass, 6)
         self.assertAlmostEqual(body_1.radius, 2.52, delta=0.001)
 
 
-class TestGravitationMethods(unittest.TestCase):
-    pass # Work in progress
-
 class TestFunctions(unittest.TestCase):
     def test_read_trajectory(self):
-        body = Body(np.array([0., 1., 2.]),
-                    np.array([1., 2., 3.]),
-                    3., 2., 'test_body.txt')
+        body = Body(np.arange(3),
+                    np.arange(3)+1,
+                    3, 2, 'test_body.txt')
         body.move(np.zeros(3), 1.)
         body.move(np.array([-1., 0., 1.]), 1.)
         trajectory = read_trajectory('test_body.txt')
-        positions = [[0., 1., 2.], [1., 3., 5.]]
+        positions = [[0, 1, 2], [1, 3, 5]]
         for i, moment in enumerate(trajectory):
-            self.assertEqual(moment[0:2], [1, 2.])
+            self.assertEqual(moment[0:2], [1, 2])
             self.assertEqual(moment[2].tolist(), positions[i])
 
     def test_calculate_acceleration(self):
         self.assertTrue(np.allclose(
-            calculate_acceleration(7., np.array([1., 1., 1.]),
-                                   np.array([3., 4., 7.]),
+            calculate_acceleration(7., np.array([1, 1, 1]).astype(float),
+                                   np.array([3, 4, 7]).astype(float),
                                    0.49),  np.array([-0.02, -0.03, -0.06])))
 
 
 if __name__ == '__main__':
     unittest.main()
+    

@@ -2,7 +2,7 @@ import numpy as np
 import numba as nb
 from collections import deque
 from time import gmtime, strftime, time
-from os import mkdir
+from os import mkdir, path
 import unittest
 import matplotlib.pyplot as plt
 from tqdm import tqdm
@@ -34,7 +34,13 @@ def read_trajectory(file_path: str) -> list:
             yield list(moment)
 
 
-        
+# def update_plot(num, trajectories, bodies_images):
+#     for body_image, trajectory in zip(bodies_images, trajectories):
+#         if trajectory[num][0]:
+#             body_image.set_data(trajectory[num][2][:2])
+#             body_image.set_3d_properties(trajectory[num][2][2])
+#     return bodies_images
+
 
 @nb.njit('float64[:](float64, float64[:], float64[:], float64)', cache=True,
          nogil=False, fastmath=True, parallel=True)
@@ -119,7 +125,7 @@ def calculate_velocity_change(acceleration: np.ndarray,
 class Gravitation:
     def __init__(self,
                  G: float = 1,
-                 tick_length: float = 1e-3,
+                 tick_length: float = 1e-2,
                  log_dir: str = 'GravityGame_logs'):
         """
         Создание движка гравитации с конкретными параметрами.
@@ -142,7 +148,8 @@ class Gravitation:
         self.G = G
         self.tick_length = tick_length
         self.log_dir = log_dir
-        mkdir(log_dir)
+        if not path.exists(log_dir):
+            mkdir(log_dir)
 
     def gravitate(self):
         """
@@ -169,14 +176,14 @@ class Gravitation:
             if body.does_exist:
                 for attractor in self.bodies:
                     if attractor != body:
-                        accelerations[-1] += self.calculate_acceleration(attractor.mass,
-                                                                         attractor.position,
-                                                                         body.position,
-                                                                         self.G)
+                        accelerations[-1] += calculate_acceleration(attractor.mass,
+                                                                    attractor.position,
+                                                                    body.position,
+                                                                    self.G)
 
         for b in range(self.bodies_number):
             # Перемещение тел
-            self.bodies[b].move(accelerations.popleft())
+            self.bodies[b].move(accelerations.popleft(), self.tick_length)
             for c in range(b):
                 # Проверка на столкновение (не учитываются несуществующие тела)
                 if (self.bodies[b].does_exist * self.bodies[c].does_exist
@@ -208,7 +215,7 @@ class Gravitation:
         self.paths = []
         for body_props in properties:
             self.paths.append(
-                f'{self.log_dir}/m{body_props[2]}_r{body_props[3]}_{strftime("%d_%m_%y_%H:%M:%S", gmtime())}_{time()%1e-3*1e9:.0f}.txt')
+                f'{self.log_dir}/m{body_props[2]}_r{body_props[3]}_{strftime("%d_%m_%y_%H_%M_%S", gmtime())}_{time()%1e-3*1e9:.0f}.txt')
             self.bodies.append(Body(body_props[0],
                                     body_props[1],
                                     body_props[2],
@@ -237,47 +244,29 @@ class Gravitation:
         for t in range(self.N):
             self.gravitate()
 
-    def animate_trajectories(self,
-                             history_length: int = 500):
-        fig = plt.figure(figsize=(5, 5))
-        # Добавляем на нее объект Axes3D для отображения графиков в 3D
-        ax = fig.add_subplot(111, projection='3d')
-        # Задаем границы
-        ax.axes.set_xlim3d(-10, 10)
-        ax.axes.set_ylim3d(-10, 10)
-        ax.axes.set_zlim3d(-8, 8)
-
-        # Отображаем пустую фигуру
+    def animate_trajectories(self):
+        fig = plt.figure()
+        ax = fig.add_subplot(projection='3d')
         fig.show()
-        fig.canvas.draw()
 
-        bodies_trajetories = [deque(maxlen=history_length)
-                              for i in range(self.bodies_number)]
+        bodies_trajectories_generators = [
+            read_trajectory(log_path) for log_path in self.paths]
 
-        for t in tqdm(np.arange(0., self.simulation_time, self.tick_length)):
-            angle = 60 + 60 * self.simulation_time / self.tick_length
-            # Удаляем графики, отображенные на предыдущем шаге
-            ax.clear()
-            # Задаем границы, потому что они скидываются на дефолтные
-            ax.axes.set_xlim3d(-10, 10)
-            ax.axes.set_ylim3d(-10, 10)
-            ax.axes.set_zlim3d(-8, 8)
+        bodies_trajectories = [[] for i in self.bodies]
 
-            for i, path in enumerate(self.paths):
-                bodies_trajetories[i].appendleft(next(read_trajectory(path)))
-            
-            for trajectory in bodies_trajetories:
-                moment = trajectory[0]
-                if moment[0]:
-                    ax.scatter(moment[2][0], moment[2][1], moment[2][2], s = moment[1])
-                
-                ax.plot(np.array(trajectory[:][2][0]), 
-                        np.array(trajectory[:][2][1]),
-                        np.array(trajectory[:][2][3]), '.-')
-            
-            # Изменяем угол отображения графика
-            ax.view_init(30 - angle * 0.2, angle)
-            # Перерисовываем фигуру
+        for generator, trajectory in zip(bodies_trajectories_generators, bodies_trajectories):
+            for moment in generator:
+                trajectory.append(moment)
+
+        for t in np.arange(self.N):
+            ax.set_xlim3d(-10, 10)
+            ax.set_ylim3d(-10, 10)
+            ax.set_zlim3d(-8, 8)
+            for trajectory in bodies_trajectories:
+                if trajectory[t][0]:
+                    ax.plot(trajectory[t][2][0],
+                            trajectory[t][2][1],
+                            trajectory[t][2][2])
             fig.canvas.draw()
 
 
@@ -469,5 +458,9 @@ class TestFunctions(unittest.TestCase):
 
 
 if __name__ == '__main__':
-    unittest.main()
-    
+    #unittest.main()
+    g = Gravitation(tick_length=0.1)
+    g.create_bodies([[np.arange(3), np.zeros(3), 3, 1],
+                     [np.array([3, 5, 7]), np.array([-1, -1, 1]), 2, 2]])
+    g.simulate_trajectories(2.)
+    g.animate_trajectories()

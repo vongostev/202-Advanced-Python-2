@@ -5,7 +5,7 @@ from time import gmtime, strftime, time
 from os import mkdir, path
 import unittest
 import matplotlib.pyplot as plt
-from tqdm import tqdm
+import matplotlib.animation as animation
 
 
 def read_trajectory(file_path: str) -> list:
@@ -33,14 +33,16 @@ def read_trajectory(file_path: str) -> list:
             moment[1] = float(moment[1].split()[1])
             yield list(moment)
 
-
-# def update_plot(num, trajectories, bodies_images):
-#     for body_image, trajectory in zip(bodies_images, trajectories):
-#         if trajectory[num][0]:
-#             body_image.set_data(trajectory[num][2][:2])
-#             body_image.set_3d_properties(trajectory[num][2][2])
-#     return bodies_images
-
+def update_plot(num, bodies_trajectories, bodies_images):
+    for trajectory, body_image in zip(bodies_trajectories, bodies_images):
+        if trajectory[num][0]:
+            body_image.set_visible(True)
+            body_image.set(ms=35*trajectory[num][1])
+            body_image.set_data(trajectory[num][2][0], trajectory[num][2][1])
+            body_image.set_3d_properties(trajectory[num][2][2])
+        else:
+            body_image.set_visible(False)
+    return bodies_images
 
 @nb.njit('float64[:](float64, float64[:], float64[:], float64)', cache=True,
          nogil=False, fastmath=True, parallel=True)
@@ -172,7 +174,7 @@ class Gravitation:
         # Вычисление ускорений. Порядковые номера ускорения и соответствующего тела совпадают
         accelerations = deque()
         for body in self.bodies:
-            accelerations.append(0.)
+            accelerations.append(np.zeros_like(self.bodies[0].position))
             if body.does_exist:
                 for attractor in self.bodies:
                     if attractor != body:
@@ -245,29 +247,33 @@ class Gravitation:
             self.gravitate()
 
     def animate_trajectories(self):
-        fig = plt.figure()
+        fig = plt.figure(figsize=(10, 10))
         ax = fig.add_subplot(projection='3d')
-        fig.show()
+        
+        ax.set_xlim3d(-10, 10)
+        ax.set_ylim3d(-10, 10)
+        ax.set_zlim3d(-8, 8)
+        
+        bodies_trajectories_generators = [read_trajectory(log_path) for 
+                                          log_path in self.paths]
+        
+        self.bodies_trajectories = [[] for i in self.bodies]
 
-        bodies_trajectories_generators = [
-            read_trajectory(log_path) for log_path in self.paths]
-
-        bodies_trajectories = [[] for i in self.bodies]
-
-        for generator, trajectory in zip(bodies_trajectories_generators, bodies_trajectories):
+        for generator, trajectory in zip(bodies_trajectories_generators, self.bodies_trajectories):
             for moment in generator:
                 trajectory.append(moment)
+        
+        self.bodies_images = [ax.plot([], [], [], 'o', ms=10)[0] for i in self.bodies]
+        
+        
+        self.anim = animation.FuncAnimation(fig, update_plot, frames=self.N,
+                                            fargs = (self.bodies_trajectories, self.bodies_images), 
+                                            interval=self.tick_length)
+        
 
-        for t in np.arange(self.N):
-            ax.set_xlim3d(-10, 10)
-            ax.set_ylim3d(-10, 10)
-            ax.set_zlim3d(-8, 8)
-            for trajectory in bodies_trajectories:
-                if trajectory[t][0]:
-                    ax.plot(trajectory[t][2][0],
-                            trajectory[t][2][1],
-                            trajectory[t][2][2])
-            fig.canvas.draw()
+        
+        
+        
 
 
 class Body:
@@ -458,9 +464,9 @@ class TestFunctions(unittest.TestCase):
 
 
 if __name__ == '__main__':
-    #unittest.main()
-    g = Gravitation(tick_length=0.1)
-    g.create_bodies([[np.arange(3), np.zeros(3), 3, 1],
-                     [np.array([3, 5, 7]), np.array([-1, -1, 1]), 2, 2]])
-    g.simulate_trajectories(2.)
+    unittest.main()
+    g = Gravitation(G=30, tick_length=0.005)
+    g.create_bodies([[np.array([0, 0, 0]), np.zeros(3), 6, 2],
+                     [np.array([5, 0, 0]), np.array([0, 7, 0]), 3, 1]])
+    g.simulate_trajectories(4.)
     g.animate_trajectories()

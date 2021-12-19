@@ -33,16 +33,7 @@ def read_trajectory(file_path: str) -> list:
             moment[1] = float(moment[1].split()[1])
             yield list(moment)
 
-def update_plot(num, bodies_trajectories, bodies_images):
-    for trajectory, body_image in zip(bodies_trajectories, bodies_images):
-        if trajectory[num][0]:
-            body_image.set_visible(True)
-            body_image.set(ms=35*trajectory[num][1])
-            body_image.set_data(trajectory[num][2][0], trajectory[num][2][1])
-            body_image.set_3d_properties(trajectory[num][2][2])
-        else:
-            body_image.set_visible(False)
-    return bodies_images
+
 
 @nb.njit('float64[:](float64, float64[:], float64[:], float64)', cache=True,
          nogil=False, fastmath=True, parallel=True)
@@ -254,26 +245,35 @@ class Gravitation:
         ax.set_ylim3d(-10, 10)
         ax.set_zlim3d(-8, 8)
         
-        bodies_trajectories_generators = [read_trajectory(log_path) for 
-                                          log_path in self.paths]
+        self.bodies_images = [ax.plot([], [], [], 'o')[0] for i in self.bodies]
+        self.bodies_traces = [ax.plot([], [], [], '-')[0] for i in self.bodies]
         
-        self.bodies_trajectories = [[] for i in self.bodies]
-
-        for generator, trajectory in zip(bodies_trajectories_generators, self.bodies_trajectories):
-            for moment in generator:
-                trajectory.append(moment)
+        self.anim = animation.FuncAnimation(fig, self.update_plot, 
+                                            frames=self.N, interval=0.)
         
-        self.bodies_images = [ax.plot([], [], [], 'o', ms=10)[0] for i in self.bodies]
-        
-        
-        self.anim = animation.FuncAnimation(fig, update_plot, frames=self.N,
-                                            fargs = (self.bodies_trajectories, self.bodies_images), 
-                                            interval=self.tick_length)
-        
-
-        
-        
-        
+    def update_plot(self, num):
+        if num == 0:
+            self.generators = [read_trajectory(file_path) 
+                               for file_path in self.paths]
+            self.traces = [deque(maxlen=500) for i in self.bodies]
+        moments = [next(gen) for gen in self.generators]
+        for moment, trace, body_image, body_trace in zip(moments, 
+                                                         self.traces, 
+                                                         self.bodies_images, 
+                                                         self.bodies_traces):
+            if moment[0]:
+                body_image.set_visible(True)
+                body_image.set(ms=25*moment[1])
+                body_image.set_data(moment[2][0], moment[2][1])
+                body_image.set_3d_properties(moment[2][2])
+                trace.append(moment[2])
+                new_data = np.array(trace)
+                body_trace.set_data(new_data[:, :2].T)
+                body_trace.set_3d_properties(new_data[:, 2].T)
+            else:
+                body_image.set_visible(False)
+        return self.bodies_images, self.bodies_traces
+    
 
 
 class Body:
@@ -465,8 +465,8 @@ class TestFunctions(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
-    g = Gravitation(G=30, tick_length=0.005)
-    g.create_bodies([[np.array([0, 0, 0]), np.zeros(3), 6, 2],
-                     [np.array([5, 0, 0]), np.array([0, 7, 0]), 3, 1]])
-    g.simulate_trajectories(4.)
+    g = Gravitation(G=30, tick_length=0.01)
+    g.create_bodies([[np.array([0, 0, 0]), np.array([0, -2.5, 0]), 6, 2],
+                     [np.array([5, 0, 0]), np.array([0, 5, 0]), 3, 1]])
+    g.simulate_trajectories(8.)
     g.animate_trajectories()

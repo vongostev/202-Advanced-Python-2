@@ -1,0 +1,1 @@
+from .gravitation_module import Star, CosmicBody, max_norm, max_r 

@@ -21,7 +21,7 @@ def read_trajectory(file_path: str) -> list:
     Yields
     ------
     list
-        Свойства тела в конкретный тик в формате [does_exist, radius, position].
+        Свойства тела в конкретный тик в формате [does_exist, mass, position].
 
     """
     with open(file_path) as trajectory:
@@ -180,7 +180,7 @@ class Gravitation:
             for c in range(b):
                 # Проверка на столкновение (не учитываются несуществующие тела)
                 if (self.bodies[b].does_exist * self.bodies[c].does_exist
-                    and self.bodies[c].radius + self.bodies[b].radius
+                    and (self.bodies[c].mass)**(1/3) + (self.bodies[b].mass)**(1/3)
                         >= np.linalg.norm(self.bodies[b].position - self.bodies[c].position)):
                     self.bodies[b].merge(self.bodies[c])
 
@@ -192,7 +192,6 @@ class Gravitation:
             properties[i][0] : np.ndarray - начальное положение тела (массив из float64)
             properties[i][1] : np.ndarray - начальная скорость тела (массив из float64)
             properties[i][2] : float - масса тела
-            properties[i][3] : float - радиус тела
 
         Parameters
         ----------
@@ -208,11 +207,10 @@ class Gravitation:
         self.paths = []
         for body_props in properties:
             self.paths.append(
-                f'{self.log_dir}/m{body_props[2]}_r{body_props[3]}_{strftime("%d_%m_%y_%H_%M_%S", gmtime())}_{time()%1e-3*1e9:.0f}.txt')
+                f'{self.log_dir}/m{body_props[2]}_{strftime("%d_%m_%y_%H_%M_%S", gmtime())}_{time()%1e-3*1e9:.0f}.txt')
             self.bodies.append(Body(body_props[0],
                                     body_props[1],
                                     body_props[2],
-                                    body_props[3],
                                     self.paths[-1]))
         self.bodies_number = len(self.bodies)
 
@@ -281,7 +279,6 @@ class Body:
                  position: np.ndarray,
                  velocity: np.ndarray,
                  mass: float,
-                 radius: float,
                  log_path: str):
         """
         Конструктор тела, создающий тело с заданными координатой, скоростью, 
@@ -296,8 +293,6 @@ class Body:
             Скорость тела.
         mass : float
             Масса тела.
-        radius : float
-            Радиус тела.
         log_path : str
             Путь к файлу, в который будет сохранена траектория тела.
 
@@ -309,7 +304,6 @@ class Body:
         self.position = position.astype(float)
         self.velocity = velocity.astype(float)
         self.mass = float(mass)
-        self.radius = float(radius)
         self.log_path = log_path
         f = open(log_path, 'w')
         f.close()
@@ -338,7 +332,7 @@ class Body:
         """
         with open(self.log_path, 'a') as log_file:
             log_file.write(
-                f'{self.does_exist} {self.radius} {self.position}\n')
+                f'{self.does_exist} {self.mass**(1/3)} {self.position}\n')
 
         self.position += calculate_position_change(
             self.velocity, acceleration, tick_length)
@@ -355,7 +349,6 @@ class Body:
 
         """
         self.mass = 0
-        self.radius = 0
         self.does_exist = 0
         self.velocity = np.zeros_like(self.velocity)
 
@@ -383,7 +376,6 @@ class Body:
         self.velocity = (self.velocity * self.mass + other_body.velocity
                          * other_body.mass) / (self.mass + other_body.mass)
         self.mass += other_body.mass
-        self.radius = (self.radius**3 + other_body.radius**3)**(1/3)
         other_body.destroy()
 
 
@@ -391,18 +383,17 @@ class Body:
 
 class TestBodyMethods(unittest.TestCase):
     def test_init(self):
-        body = Body(np.arange(3), np.arange(3), 3, 2, 'test_body.txt')
+        body = Body(np.arange(3), np.arange(3), 3, 'test_body.txt')
         self.assertEqual(body.position.tolist(), [0, 1, 2])
         self.assertEqual(body.velocity.tolist(), [0, 1, 2])
         self.assertEqual(body.mass, 3)
-        self.assertEqual(body.radius, 2)
         self.assertEqual(body.log_path, 'test_body.txt')
         self.assertEqual(body.does_exist, 1)
 
     def test_move(self):
         body = Body(np.arange(3),
                     np.arange(3)+1,
-                    3, 2, 'test_body.txt')
+                    3, 'test_body.txt')
         body.move(np.zeros(3), 1.)
         self.assertEqual(body.position.tolist(), [1, 3, 5])
         self.assertEqual(body.velocity.tolist(), [1, 2, 3])
@@ -410,50 +401,47 @@ class TestBodyMethods(unittest.TestCase):
         self.assertEqual(body.position.tolist(), [1.5, 5, 8.5])
         self.assertEqual(body.velocity.tolist(), [0, 2, 4])
         with open('test_body.txt', 'r') as log_file:
-            self.assertEqual(log_file.readline(), '1 2.0 [0. 1. 2.]\n')
-            self.assertEqual(log_file.readline(), '1 2.0 [1. 3. 5.]\n')
+            self.assertEqual(log_file.readline(), f'1 {3**(1/3)} [0. 1. 2.]\n')
+            self.assertEqual(log_file.readline(), f'1 {3**(1/3)} [1. 3. 5.]\n')
 
     def test_destroy(self):
         body = Body(np.arange(3),
                     np.arange(3)+1,
-                    3, 2, 'test_body.txt')
+                    3, 'test_body.txt')
         body.destroy()
         self.assertEqual(body.position.tolist(), [0, 1, 2])
         self.assertEqual(body.velocity.tolist(), [0, 0, 0])
         self.assertEqual(body.mass, 0)
-        self.assertEqual(body.radius, 0)
 
     def test_merge(self):
         body_1 = Body(np.arange(3),
                       np.arange(3)+1,
-                      3, 2, 'test_body_1.txt')
+                      3, 'test_body_1.txt')
         body_2 = Body(np.array([1, 2, 3]),
                       np.array([-1, -2, -3]),
-                      3, 2, 'test_body_2.txt')
+                      3, 'test_body_2.txt')
         body_1.merge(body_2)
         # body_2 is destroyed
         self.assertEqual(body_2.position.tolist(), [1, 2, 3])
         self.assertEqual(body_2.velocity.tolist(), [0, 0, 0])
         self.assertEqual(body_2.mass, 0)
-        self.assertEqual(body_2.radius, 0)
         # body_1 is merged
         self.assertEqual(body_1.position.tolist(), [0.5, 1.5, 2.5])
         self.assertEqual(body_1.velocity.tolist(), [0, 0, 0])
         self.assertEqual(body_1.mass, 6)
-        self.assertAlmostEqual(body_1.radius, 2.52, delta=0.001)
 
 
 class TestFunctions(unittest.TestCase):
     def test_read_trajectory(self):
         body = Body(np.arange(3),
                     np.arange(3)+1,
-                    3, 2, 'test_body.txt')
+                    3, 'test_body.txt')
         body.move(np.zeros(3), 1.)
         body.move(np.array([-1., 0., 1.]), 1.)
         trajectory = read_trajectory('test_body.txt')
         positions = [[0, 1, 2], [1, 3, 5]]
         for i, moment in enumerate(trajectory):
-            self.assertEqual(moment[0:2], [1, 2])
+            self.assertEqual(moment[0:2], [1, 3**(1/3)])
             self.assertEqual(moment[2].tolist(), positions[i])
 
     def test_calculate_acceleration(self):
@@ -466,7 +454,7 @@ class TestFunctions(unittest.TestCase):
 if __name__ == '__main__':
     unittest.main()
     g = Gravitation(G=30, tick_length=0.01)
-    g.create_bodies([[np.array([0, 0, 0]), np.array([0, -2.5, 0]), 6, 2],
-                     [np.array([5, 0, 0]), np.array([0, 5, 0]), 3, 1]])
-    g.simulate_trajectories(8.)
+    g.create_bodies([[np.array([0, 0, 0]), np.array([0, -2.5, 0]), 6],
+                     [np.array([5, 0, 0]), np.array([0, 5, 0]), 3]])
+    g.simulate_trajectories(15.)
     g.animate_trajectories()

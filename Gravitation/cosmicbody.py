@@ -6,7 +6,7 @@ from numba import njit
 
 from Star import Star
 
-dt = 1000
+dt = 1
 G = 6.674e-11
 
 
@@ -51,12 +51,12 @@ class CosmicBody(metaclass=ABCMeta):
             self.velocity = delta_v + self.velocity
 
     def orbit_type(self, gravitate_star: Star):
+
         e = np.float_power(np.linalg.norm(self.velocity),
                            2) / 2 - G * gravitate_star.mass / np.linalg.norm(self.position)
-        print(e)
-        if e > 0:
-            return "hyperbola"
-        if e < 0:
+        if e > 1e-8:
+            return "hyperbole"
+        if e < -1e-8:
             return "ellipse"
         return "parabola"
 
@@ -85,6 +85,7 @@ class CosmicBody2D(CosmicBody):
             position_y.append(self.position[1])
             self.step(gravitate_star)
             if self.destroy(gravitate_star):
+                print('destroyed')
                 break
             time += dt
         return [position_x, position_y]
@@ -98,7 +99,7 @@ class CosmicBody2D(CosmicBody):
         for i in list_cosmic_bodies:
             trajectory.append(i.locus(gravitate_star, time_stop))
             plt.scatter(trajectory[k][0][0], trajectory[k][1][0])
-            plt.scatter(0, 0, color='darkgreen')
+            plt.scatter(0, 0, marker="*")
             plt.plot(trajectory[k][0], trajectory[k][1])
             k += 1
         plt.show()
@@ -108,8 +109,8 @@ class CosmicBody3D(CosmicBody):
     @staticmethod
     def create_random_cosmic_body():
         return CosmicBody3D(random.uniform(1e5, 1e7),
-                            np.array([(random.uniform(0, 10000)),
-                                      (random.uniform(0, 10000)), random.uniform(0, 10000)]),
+                            np.array([(random.uniform(0, 100000)),
+                                      (random.uniform(0, 100000)), random.uniform(0, 100000)]),
                             np.array([(random.uniform(-10000, 10000)),
                                       (random.uniform(-10000, 10000)), random.uniform(-10000, 10000)]))
 
@@ -118,6 +119,7 @@ class CosmicBody3D(CosmicBody):
                 self.position[2]) < gravitate_star.radius:
             self.mass = 0
             return 1
+        return 0
 
     def locus(self, gravitate_star: Star, time_stop):
         position_x = []
@@ -129,6 +131,9 @@ class CosmicBody3D(CosmicBody):
             position_y.append(self.position[1])
             position_z.append(self.position[2])
             self.step(gravitate_star)
+            if self.destroy(gravitate_star):
+                print("desroyed")
+                break
             time += dt
         return [position_x, position_y, position_z]
 
@@ -140,6 +145,7 @@ class CosmicBody3D(CosmicBody):
         plt.figure()
         ax = plt.axes(projection='3d')
         trajectory = []
+        ax.scatter(0, 0, 0, color='r', marker="*")
         for i in list_cosmic_bodies:
             trajectory.append(i.locus(gravitate_star, time_stop))
             ax.plot3D(trajectory[k][0], trajectory[k][1], trajectory[k][2])

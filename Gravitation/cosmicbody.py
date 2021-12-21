@@ -2,12 +2,18 @@ import random
 from abc import ABCMeta, abstractmethod
 import numpy as np
 import matplotlib.pyplot as plt
-import numba as nb
+from numba import njit
 
-import Star
+from Star import Star
 
-dt = 1000000
+dt = 1000
 G = 6.674e-11
+
+
+@njit('float64(float64[:])', cache=True,
+      nogil=False, fastmath=True)
+def norm(vec: np.ndarray):
+    return np.linalg.norm(vec)
 
 
 class CosmicBody(metaclass=ABCMeta):
@@ -17,7 +23,7 @@ class CosmicBody(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def destroy(self):
+    def destroy(self, gravitate_star: Star):
         pass
 
     @staticmethod
@@ -35,25 +41,22 @@ class CosmicBody(metaclass=ABCMeta):
         self.velocity = velocity
         self.position = position
 
-    @nb.njit
     def gravitate(self, gravitate_star: Star):
-        return - G * self.mass * gravitate_star.mass * self.position / np.linalg.norm(self.position) ** 3
+        return - G * self.mass * gravitate_star.mass * self.position / np.power(np.linalg.norm(self.position), 3)
 
-    @nb.njit
     def step(self, gravitate_star: Star):
-        if self.destroy() != 1:
+        if self.destroy(gravitate_star) != 1:
             delta_v = self.gravitate(gravitate_star) * dt / self.mass
             self.position = self.position + self.velocity * dt + delta_v * np.float_power(dt, 2) / 2
             self.velocity = delta_v + self.velocity
 
-    @nb.njit
     def orbit_type(self, gravitate_star: Star):
-        e = self.mass * np.float_power(np.linalg.norm(self.velocity),
-                                       2) / 2 - G * self.mass * gravitate_star.mass / np.linalg.norm(self.position)
+        e = np.float_power(np.linalg.norm(self.velocity),
+                           2) / 2 - G * gravitate_star.mass / np.linalg.norm(self.position)
         print(e)
-        if e > 1e-2:
+        if e > 0:
             return "hyperbola"
-        if e < -1e-2:
+        if e < 0:
             return "ellipse"
         return "parabola"
 
@@ -61,16 +64,17 @@ class CosmicBody(metaclass=ABCMeta):
 class CosmicBody2D(CosmicBody):
     @staticmethod
     def create_random_cosmic_body():
-        return CosmicBody2D(float(random.randrange(1e22, 1e23, 1.0e19)),
-                            np.array([float(random.randrange(-10000, 10000, 10)),
-                                      float(random.randrange(-10000, 10000, 10))]),
-                            np.array([float(random.randrange(-1e11, 1e11, 1e8)),
-                                      float(random.randrange(-1e11, 1e11, 1e8))]))
+        return CosmicBody2D(random.uniform(1e5, 1e7),
+                            np.array([random.uniform(0, 100000),
+                                      (random.uniform(0, 100000))]),
+                            np.array([(random.uniform(-10000, 10000)),
+                                      random.uniform(-10000, 10000)]))
 
-    def destroy(self):
-        if abs(self.position[0]) < 0.01 and abs(self.position[1]) < 0.01:
+    def destroy(self, gravitate_star: Star):
+        if abs(self.position[0]) < gravitate_star.radius and abs(self.position[1]) < gravitate_star.radius:
             self.mass = 0
             return 1
+        return 0
 
     def locus(self, gravitate_star: Star, time_stop):
         position_x = []
@@ -80,6 +84,8 @@ class CosmicBody2D(CosmicBody):
             position_x.append(self.position[0])
             position_y.append(self.position[1])
             self.step(gravitate_star)
+            if self.destroy(gravitate_star):
+                break
             time += dt
         return [position_x, position_y]
 
@@ -91,6 +97,8 @@ class CosmicBody2D(CosmicBody):
         trajectory = []
         for i in list_cosmic_bodies:
             trajectory.append(i.locus(gravitate_star, time_stop))
+            plt.scatter(trajectory[k][0][0], trajectory[k][1][0])
+            plt.scatter(0, 0, color='darkgreen')
             plt.plot(trajectory[k][0], trajectory[k][1])
             k += 1
         plt.show()
@@ -99,16 +107,15 @@ class CosmicBody2D(CosmicBody):
 class CosmicBody3D(CosmicBody):
     @staticmethod
     def create_random_cosmic_body():
-        return CosmicBody3D(float(random.randrange(1e6, 1e8, 10)),
-                            np.array([float(random.randrange(-1000, 1000, 10)),
-                                      float(random.randrange(-1000, 1000, 10)),
-                                      float(random.randrange(-1000, 1000, 10))]),
-                            np.array([float(random.randrange(-1e11, 1e11, 1e8)),
-                                      float(random.randrange(-1e11, 1e11, 1e8)),
-                                      float(random.randrange(-1e11, 1e11, 1e8))]))
+        return CosmicBody3D(random.uniform(1e5, 1e7),
+                            np.array([(random.uniform(0, 10000)),
+                                      (random.uniform(0, 10000)), random.uniform(0, 10000)]),
+                            np.array([(random.uniform(-10000, 10000)),
+                                      (random.uniform(-10000, 10000)), random.uniform(-10000, 10000)]))
 
-    def destroy(self):
-        if abs(self.position[0]) < 0.01 and abs(self.position[1]) < 0.01 and abs(self.position[2] < 0.01):
+    def destroy(self, gravitate_star: Star):
+        if abs(self.position[0]) < gravitate_star.radius and abs(self.position[1]) < gravitate_star.radius and abs(
+                self.position[2]) < gravitate_star.radius:
             self.mass = 0
             return 1
 

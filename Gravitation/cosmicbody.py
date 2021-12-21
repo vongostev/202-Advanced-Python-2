@@ -13,6 +13,20 @@ G = 6.674e-11
 @njit('float64(float64[:])', cache=True,
       nogil=False, fastmath=True)
 def norm(vec: np.ndarray):
+    """
+            Returns norm of vector
+
+            Parameters
+            ----------
+            vec : np.ndarray
+                vector.
+
+            Returns
+            -------
+            float
+                 norm of vector.
+
+            """
     return np.linalg.norm(vec)
 
 
@@ -20,15 +34,60 @@ class CosmicBody(metaclass=ABCMeta):
     @staticmethod
     @abstractmethod
     def create_random_cosmic_body():
+        """
+                          Creating CosmicBody with random parameters
+
+                          Parameters
+                          ----------
+
+                          None
+
+                          Returns
+                          -------
+
+                          CosmicBody
+
+                          """
         pass
 
     @abstractmethod
     def destroy(self, gravitate_star: Star):
+        """
+                   Destroying CosmicBody
+
+                   Parameters
+                   ----------
+                   gravitate_star : Star
+
+                   self : CosmicBody
+
+                   Returns
+                   -------
+
+                   None
+
+                   """
         pass
 
     @staticmethod
     @abstractmethod
     def graph(gravitate_star: Star, time_stop, list_cosmic_bodies=None):
+        """
+                         Plotting trajectory of bodies
+
+                         Parameters
+                         ----------
+                         gravitate_star : Star
+
+                         time_stop : float
+
+                         list_cosmic_bodies : list
+
+                         Returns
+                         -------
+                         None
+
+                         """
         if list_cosmic_bodies is None:
             list_cosmic_bodies = []
 
@@ -37,20 +96,80 @@ class CosmicBody(metaclass=ABCMeta):
         pass
 
     def __init__(self, mass: float, velocity: np.ndarray, position: np.ndarray):
+        """
+                        Initialization
+
+                        Parameters
+                        ----------
+                        mass : float
+                            Object mass.
+                        velocity : np.ndarray
+                            Velocity vector.
+                        position : np.ndarray
+                            radius-vector.
+                        Returns
+                        -------
+                        None.
+
+                        """
         self.mass = mass
         self.velocity = velocity
         self.position = position
 
     def gravitate(self, gravitate_star: Star):
+        """
+                  Calculating the value of the gravitational interaction force at this step
+
+                  Parameters
+                  ----------
+                  gravitate_star : Star
+
+                  self : CosmicBody
+
+                  Returns
+                  -------
+                  float
+                       the value of the gravitational interaction force at this step
+
+                  """
         return - G * self.mass * gravitate_star.mass * self.position / np.power(np.linalg.norm(self.position), 3)
 
     def step(self, gravitate_star: Star):
+        """
+                           Calculating the increment of the velocity vector and the radius vector at this iteration
+
+                           Parameters
+                           ----------
+                           gravitate_star : Star
+
+                           self : CosmicBody
+
+                           Returns
+                           -------
+                           None
+
+                           """
         if self.destroy(gravitate_star) != 1:
             delta_v = self.gravitate(gravitate_star) * dt / self.mass
             self.position = self.position + self.velocity * dt + delta_v * np.float_power(dt, 2) / 2
             self.velocity = delta_v + self.velocity
 
     def orbit_type(self, gravitate_star: Star):
+        """
+                   Defines body's orbit type
+
+                   Parameters
+                   ----------
+                   gravitate_star : Star
+
+                   self : CosmicBody
+
+                   Returns
+                   -------
+                   string
+                       orbit type
+
+                   """
 
         e = np.float_power(np.linalg.norm(self.velocity),
                            2) / 2 - G * gravitate_star.mass / np.linalg.norm(self.position)
@@ -132,7 +251,7 @@ class CosmicBody3D(CosmicBody):
             position_z.append(self.position[2])
             self.step(gravitate_star)
             if self.destroy(gravitate_star):
-                print("desroyed")
+                print("destroyed")
                 break
             time += dt
         return [position_x, position_y, position_z]

@@ -1,5 +1,10 @@
 # -*- coding: utf-8 -*-
 
+import matplotlib.pyplot as plt
+import time
+from celluloid import Camera
+
+
 from random import random
 import numpy
 
@@ -85,15 +90,6 @@ class Object:
         return VecForce
         
 
-a = Object()
-b = Object()
-
-#print("Gravity a-b:", a.CalcInteractionForce(b));
-#print("Gravity b-a:", b.CalcInteractionForce(a));
-
-
-
-
 class ObjectSystem:
     
     def __init__(self):
@@ -146,7 +142,6 @@ class ObjectSystem:
         
         for i in range(len(self.objects)):
             for q in range(i + 1, len(self.objects)):
-                #print(i, " - ", q)
                 IForce = self.objects[i].CalcInteractionForce(self.objects[q])
                 forces[i] = forces[i] + IForce
                 forces[q] = forces[q] - IForce
@@ -166,7 +161,7 @@ class ObjectSystem:
             
         EndEnergy = self.Calc_Energy()
         
-        #print("Energy factor:", BegEnergy - EndEnergy)
+        #print("Energy factor:", 2.0 * (BegEnergy - EndEnergy) / (BegEnergy + EndEnergy))
         
         
         
@@ -192,16 +187,52 @@ System.add_object_by_parameters([0,-1E+9,0],   [-1E+5,0,0],    [0,1E-5,1E-5],   
 #print("All Interforces:", System.Calc_Forces())
 #print("System Energy:  ", System.Calc_Energy())
 
+
+
+
+fig = plt.figure(figsize=(10, 10), dpi=100)
+
+camera = Camera(fig)
+
+ax = fig.add_subplot(111, projection='3d')
+
+# ax.axes.set_xlim3d(-10, 10)
+# ax.axes.set_ylim3d(-10, 10)
+# ax.axes.set_zlim3d(-8, 8)  
+
+trajectoryX = []
+trajectoryY = []
+trajectoryZ = []
+
 file = open("trajectories_data.txt", "w")
 
-for i in range(10000):
+for i in range(100):
     System.Calc_Iteration()
+    
+    trajectoryX.append(System.objects[2].pos[0])
+    trajectoryY.append(System.objects[2].pos[1])
+    trajectoryZ.append(System.objects[2].pos[2])
+    
+    #ax.scatter(trajectoryX, trajectoryY, trajectoryZ, s=1, color="green", linewidths=0.5)
+    ax.plot3D(trajectoryX, trajectoryY, trajectoryZ, "--", color="green", linewidth=1.5)
+    
+    # fig.canvas.draw()
+    
+    camera.snap()
     
     for obj in System.objects:
         file.write(str(obj.pos[0]) + " " + str(obj.pos[1]) + " " + str(obj.pos[2]) + " ")
+        
     file.write("\n")
 
 
 file.close()
 
+fig.canvas.draw()
+
+animation = camera.animate(interval = 33)
+animation.save('my_animation.gif')
+
 print("Finish")
+
+

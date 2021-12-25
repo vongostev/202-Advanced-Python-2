@@ -3,8 +3,6 @@ import unittest
 import numpy as np
 import matplotlib.pyplot as plt
 
-G = 6.67e-11
-dt = 0.001
 
 class Star:
     def __init__(self, mass: float, radius: float):
@@ -92,33 +90,28 @@ class Tests(unittest.TestCase):
         self.assertEqual(body2.kind_of_trajectory(star), 'hyperbola')
 
     def test_destroy(self):
-        star = Star(1.9e30, 7e4)
-        body = CosmicBody(5.97e24, np.array([-5000, 0]), np.array([146e2, 0]))
-        G = 6.674e-11
-        body.graph2D(star, 0, 10)
+        star = Star(1.9e30, 7e8)
+        body = CosmicBody(3.33e23, np.array([298. / np.sqrt(2), -29800. / np.sqrt(
+            2)]), np.array([146e3 / np.sqrt(2), 146e8 / np.sqrt(2)]))
+        body.graph2D(star, 0, 10000000)
         self.assertEqual(body.destroy(star), 1)
 
+G = 6.67e-11
+dt = 100
+m = 5.97e24
+r = 6.3e6
+M = 1.989e30
+R = 7e8
 
+"Земля и Солнце"
+star = Star(M, R)
+earth = CosmicBody(m, np.array([0, 30.4e3]), np.array([1.47e11, 0]))
+print(earth.kind_of_trajectory(star))
+earth.graph2D(star, 0, 365 * 24 * 3600)
 
 if __name__ == '__main__':
     unittest.main()
-#G = 6.67e-11
-#dt = 1000
-#t_beg = 0
-#t_end = 365.25 * 24 * 3600
-#a1 = CosmicBody(3.33e23, np.array([29800. / np.sqrt(2), -29800. / np.sqrt(
-#        2), 0]), np.array([146e9 / np.sqrt(2), 146e9 / np.sqrt(2), 0]))
-#star = Star(1.9e30, 0)
-#a1.graph2D(star, t_beg, t_end)
-#a1.graph3D(star, t_beg, t_end)
 
-#fish1 = CosmicBody(3.33e23, np.array([29800. / np.sqrt(2), -29800. / np.sqrt(
-#        2)]), np.array([146e9 / np.sqrt(2), 146e9 / np.sqrt(2)]))
-#fish2 = CosmicBody(3.33e23, np.array([29800. / np.sqrt(2), 29800. / np.sqrt(
-#        2)]), np.array([146e9 / np.sqrt(2), -(146e9 / np.sqrt(2))]))
-#t_beg = 0
-#t_end = 100 * 24 * 3600
-#fish1.graph2D(star, t_beg, t_end, [fish2])
 
 
 

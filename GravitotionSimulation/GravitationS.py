@@ -67,6 +67,11 @@ class Object:
         self.rad = random() * SimulationSettings.get("ObjectMaxInitialRadius")
         
         
+        
+        self.trajectory_points = numpy.array( [numpy.array([0.0,0.0,0.0])] * 100 );
+        
+        
+        
         if(self.echo):
             print("ObjectBox ", self, " - has been sucessfully created with:")
             print("\tPosition: \t{", self.pos[0], ",", self.pos[1], ",", self.pos[2], "}")
@@ -75,6 +80,11 @@ class Object:
             print("\tMass: \t\t\t", self.mas)
             print("\tSelfRadius: \t", self.rad)
      
+        
+    def update(self):
+        self.trajectory_points = numpy.roll(self.trajectory_points, -1)
+        self.trajectory_points[0] = self.pos
+        
     
     def CalcInteractionForce(self, other):
         
@@ -95,7 +105,9 @@ class ObjectSystem:
     def __init__(self):
         self.objects = []
         
-        self.energy = 0
+        self.fig = plt.figure(figsize=(10, 10), dpi=100)
+        self.camera = Camera(self.fig)
+        self.ax = self.fig.add_subplot(111, projection='3d')  
     
         
     def add_object(self, some_object):
@@ -137,6 +149,14 @@ class ObjectSystem:
                 energy = energy - 6.67E-11 * self.objects[i].mas * self.objects[q].mas / numpy.linalg.norm(self.objects[i].pos - self.objects[q].pos)
         return energy
     
+    def Calc_Impulse(self):
+        impulse = numpy.array([0,0,0])
+        for obj in self.objects:
+            impulse = impulse + obj.mas * obj.spd
+        return impulse;
+            
+    
+    
     def Calc_Forces(self):
         forces = [numpy.array([0.0,0.0,0.0])] * len(self.objects)
         
@@ -152,25 +172,36 @@ class ObjectSystem:
     def Calc_Iteration(self):
         BegEnergy = self.Calc_Energy()
         
-        dt = 1E-0
+        dt = 1E+0
         InterForces = self.Calc_Forces()
         
         for i in range(len(self.objects)):
             self.objects[i].spd = self.objects[i].spd + (InterForces[i] / self.objects[i].mas) * dt
             self.objects[i].pos = self.objects[i].pos + self.objects[i].spd * dt
+            self.objects[i].update()
             
         EndEnergy = self.Calc_Energy()
         
-        #print("Energy factor:", 2.0 * (BegEnergy - EndEnergy) / (BegEnergy + EndEnergy))
+        EnergyError = 2.0 * (BegEnergy - EndEnergy) / (BegEnergy + EndEnergy)
         
+        assert EnergyError <= 1E-1
         
+    
+    def draw(self):
+        self.fig.clf()
+        
+        for obj in self.objects:
+            trajectory = numpy.rot90(obj.trajectory_points)
+            self.ax.plot3D(trajectory[0], trajectory[1], trajectory[2],"--", color="green", linewidth=1.5)
+            
+        self.fig.canvas.draw()
         
         
     
     
     
     
-System = ObjectSystem();
+System = ObjectSystem()
 
 # System.add_object_by_parameters([0,0,0], [0,0,0], [0,0,1E-5], 1E+30, 1E+9)
 # System.add_object_by_parameters([0,1E+10,0], [1E+5,0,0], [0,1E-5,1E-5], 1E+20, 1E+5)
@@ -184,41 +215,19 @@ System.add_object_by_parameters([0,-1E+9,0],   [-1E+5,0,0],    [0,1E-5,1E-5],   
 # System.add_object_by_parameters([0,+1,0],   [+81.7E-5,0,0],     [0,0,1],    10, 1)
 # System.add_object_by_parameters([0,-1,0],   [-81.7E-5,0,0],     [0,0,1],    10, 1)
 
-#print("All Interforces:", System.Calc_Forces())
-#print("System Energy:  ", System.Calc_Energy())
+print("System Energy:  ", System.Calc_Energy())
+print("System Impulse: ", System.Calc_Impulse())
 
 
 
 
-fig = plt.figure(figsize=(10, 10), dpi=100)
-
-camera = Camera(fig)
-
-ax = fig.add_subplot(111, projection='3d')
-
-# ax.axes.set_xlim3d(-10, 10)
-# ax.axes.set_ylim3d(-10, 10)
-# ax.axes.set_zlim3d(-8, 8)  
-
-trajectoryX = []
-trajectoryY = []
-trajectoryZ = []
 
 file = open("trajectories_data.txt", "w")
 
-for i in range(100):
+for i in range(1000):
     System.Calc_Iteration()
     
-    trajectoryX.append(System.objects[2].pos[0])
-    trajectoryY.append(System.objects[2].pos[1])
-    trajectoryZ.append(System.objects[2].pos[2])
-    
-    #ax.scatter(trajectoryX, trajectoryY, trajectoryZ, s=1, color="green", linewidths=0.5)
-    ax.plot3D(trajectoryX, trajectoryY, trajectoryZ, "--", color="green", linewidth=1.5)
-    
-    # fig.canvas.draw()
-    
-    camera.snap()
+    System.draw()
     
     for obj in System.objects:
         file.write(str(obj.pos[0]) + " " + str(obj.pos[1]) + " " + str(obj.pos[2]) + " ")
@@ -228,10 +237,15 @@ for i in range(100):
 
 file.close()
 
-fig.canvas.draw()
 
-animation = camera.animate(interval = 33)
-animation.save('my_animation.gif')
+trajectory = numpy.rot90(System.objects[0].trajectory_points)
+print(trajectory[0])
+System.ax.plot3D(trajectory[0], trajectory[1], trajectory[2],"--", color="green", linewidth=1.5)
+
+System.fig.canvas.draw()
+
+#animation = camera.animate(interval = 33)
+#animation.save('my_animation.gif')
 
 print("Finish")
 

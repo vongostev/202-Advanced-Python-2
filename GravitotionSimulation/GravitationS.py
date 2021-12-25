@@ -1,19 +1,21 @@
 # -*- coding: utf-8 -*-
 
 import matplotlib.pyplot as plt
-import time
 from celluloid import Camera
 
+fig = plt.figure(figsize=(10, 10), dpi=100)
+ax = fig.add_subplot(111, projection='3d')
+camera = Camera(fig)
 
 from random import random
 import numpy
 
 
 SimulationSettings = {}
-SimulationSettings.update({     "SimulationRadius"          : 30.0E+12    })
-SimulationSettings.update({     "ObjectMaxInitialSpeed"     : 15.0E+10    })
+SimulationSettings.update({     "SimulationRadius"          : 30.0E+10    })
+SimulationSettings.update({     "ObjectMaxInitialSpeed"     : 15.0E+6    })
 SimulationSettings.update({     "ObjectMaxInitialAngVel"    : 62.0000     })
-SimulationSettings.update({     "ObjectMaxInitialMass"      : 2.00E+27    })
+SimulationSettings.update({     "ObjectMaxInitialMass"      : 2.00E+25    })
 SimulationSettings.update({     "ObjectMaxInitialRadius"    : 8.00E+7     })
 
 
@@ -68,8 +70,9 @@ class Object:
         
         
         
-        self.trajectory_points = numpy.array( [numpy.array([0.0,0.0,0.0])] * 100 );
-        
+        self.trajectoryX = [];
+        self.trajectoryY = [];
+        self.trajectoryZ = [];
         
         
         if(self.echo):
@@ -82,8 +85,9 @@ class Object:
      
         
     def update(self):
-        self.trajectory_points = numpy.roll(self.trajectory_points, -1)
-        self.trajectory_points[0] = self.pos
+        self.trajectoryX.append(self.pos[0])
+        self.trajectoryY.append(self.pos[1])
+        self.trajectoryZ.append(self.pos[2])
         
     
     def CalcInteractionForce(self, other):
@@ -104,10 +108,6 @@ class ObjectSystem:
     
     def __init__(self):
         self.objects = []
-        
-        self.fig = plt.figure(figsize=(10, 10), dpi=100)
-        self.camera = Camera(self.fig)
-        self.ax = self.fig.add_subplot(111, projection='3d')  
     
         
     def add_object(self, some_object):
@@ -156,7 +156,6 @@ class ObjectSystem:
         return impulse;
             
     
-    
     def Calc_Forces(self):
         forces = [numpy.array([0.0,0.0,0.0])] * len(self.objects)
         
@@ -169,7 +168,7 @@ class ObjectSystem:
         return forces
     
     
-    def Calc_Iteration(self):
+    def Calc_Iteration(self, dt = 1E+0):
         BegEnergy = self.Calc_Energy()
         
         dt = 1E+0
@@ -184,19 +183,47 @@ class ObjectSystem:
         
         EnergyError = 2.0 * (BegEnergy - EndEnergy) / (BegEnergy + EndEnergy)
         
-        assert EnergyError <= 1E-1
+        assert EnergyError <= 1E+2
         
+    def Calc_time(self, Time, dt=1E+1):
+        t = 0;
+        
+        while t < Time:
+            t = t + dt;
+            self.Calc_Iteration(dt)
     
-    def draw(self):
-        self.fig.clf()
+    
+    def Create_Animation(self, Step, End, Begin):
         
-        for obj in self.objects:
-            trajectory = numpy.rot90(obj.trajectory_points)
-            self.ax.plot3D(trajectory[0], trajectory[1], trajectory[2],"--", color="green", linewidth=1.5)
+        colors = ["tab:blue", "tab:orange", "tab:green", "tab:red", "tab:purple", "tab:brown", "tab:pink", "tab:olive", "tab:gray", "tab:cyan"]
+        
+        for a in range(Begin, End, Step):
+            for i in range(len(self.objects)):
+                X = self.objects[i].trajectoryX[::-1][:a]
+                Y = self.objects[i].trajectoryY[::-1][:a]
+                Z = self.objects[i].trajectoryZ[::-1][:a]
+                ax.plot3D(X, Y, Z,"--", color=colors[i%10], linewidth=1.5)
+                ax.scatter(X[::-1][:2], Y[::-1][:2], Z[::-1][:2], s=40, color=colors[i%10])
             
-        self.fig.canvas.draw()
+            ax.view_init(elev=25, azim=45+a)
+            
+            camera.snap()
         
+        animation = camera.animate(blit=False,interval=100)
+        animation.save("filename.gif")
+    
+    
+    def draw(self, a = 25, b = -45):
+        ax.clear()
         
+        ax.view_init(elev=a, azim=b)
+        
+        colors = ["tab:blue", "tab:orange", "tab:green", "tab:red", "tab:purple", "tab:brown", "tab:pink", "tab:olive", "tab:gray", "tab:cyan"]
+        
+        for i in range(len(self.objects)):
+            ax.plot3D(self.objects[i].trajectoryX, self.objects[i].trajectoryY, self.objects[i].trajectoryZ,"--", color=colors[i%10], linewidth=1.5)
+            
+        fig.canvas.draw()
     
     
     
@@ -207,45 +234,31 @@ System = ObjectSystem()
 # System.add_object_by_parameters([0,1E+10,0], [1E+5,0,0], [0,1E-5,1E-5], 1E+20, 1E+5)
 # System.add_object_by_parameters([0,-1E+10,0], [-1E+5,0,0], [0,1E-5,1E-5], 1E+20, 1E+5)
 
-System.add_object_by_parameters([0,0,0],        [0,0,0],        [0,0,1E-5],     1E+30, 1E+9)
-System.add_object_by_parameters([0,1E+9,0],    [+1E+5,0,0],     [0,1E-5,1E-5],  1E+20, 1E+5)
-System.add_object_by_parameters([0,-1E+9,0],   [-1E+5,0,0],    [0,1E-5,1E-5],   1E+30, 1E+5)
+# System.add_object_by_parameters([0,0,0],        [0,0,0],        [0,0,1E-5],         1E+30, 1E+9)
+# System.add_object_by_parameters([0,1E+9,0],     [+1E+5,0,0],    [0,1E-5,1E-5],      1E+20, 1E+5)
+# System.add_object_by_parameters([0,-1E+9,0],    [-1E+5,0,0],    [0,1E-5,1E-5],      1E+30, 1E+5)
 
 # System.add_object_by_parameters([0,0,0],    [0,0,0],            [0,0,1],    10000, 1)
 # System.add_object_by_parameters([0,+1,0],   [+81.7E-5,0,0],     [0,0,1],    10, 1)
 # System.add_object_by_parameters([0,-1,0],   [-81.7E-5,0,0],     [0,0,1],    10, 1)
 
+System.add_object_by_parameters([0,0,0],                        [0,0,0],                    [0,1,0],            1E+30,     1E+9)
+System.add_object_by_parameters([+1E+9,0,0],                    [0,+1.4E+5,1.4E+5],         [0,1,0],            0.5E+29,   1E+9)
+System.add_object_by_parameters([-1E+9,0,0],                    [0,-1E+5,0],                [0,1,0],            0.5E+20,   1E+9)
+#System.add_object_by_parameters([+0.2E+9,-0.2E+8,-1E+4],        [0,+1E+5,0],                [0,1,0],            0.5E+15,   1E+9)
+
+
 print("System Energy:  ", System.Calc_Energy())
 print("System Impulse: ", System.Calc_Impulse())
 
 
+System.Calc_time(200000)
 
+System.draw()
 
+plt.show()
 
-file = open("trajectories_data.txt", "w")
-
-for i in range(1000):
-    System.Calc_Iteration()
-    
-    System.draw()
-    
-    for obj in System.objects:
-        file.write(str(obj.pos[0]) + " " + str(obj.pos[1]) + " " + str(obj.pos[2]) + " ")
-        
-    file.write("\n")
-
-
-file.close()
-
-
-trajectory = numpy.rot90(System.objects[0].trajectory_points)
-print(trajectory[0])
-System.ax.plot3D(trajectory[0], trajectory[1], trajectory[2],"--", color="green", linewidth=1.5)
-
-System.fig.canvas.draw()
-
-#animation = camera.animate(interval = 33)
-#animation.save('my_animation.gif')
+System.Create_Animation(1000, 200000, 0)
 
 print("Finish")
 

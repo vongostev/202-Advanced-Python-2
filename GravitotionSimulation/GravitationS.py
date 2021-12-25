@@ -157,7 +157,7 @@ class ObjectSystem:
     def Calc_Iteration(self):
         BegEnergy = self.Calc_Energy()
         
-        dt = 1E-4
+        dt = 1E-0
         InterForces = self.Calc_Forces()
         
         for i in range(len(self.objects)):
@@ -177,13 +177,31 @@ class ObjectSystem:
     
 System = ObjectSystem();
 
-System.add_object_by_parameters([0,0,0], [0,0,0], [0,0,1E-5], 1E+30, 1E+9)
-System.add_object_by_parameters([0,1E+10,0], [1E+5,0,0], [0,1E-5,1E-5], 1E+20, 1E+5)
-System.add_object_by_parameters([0,-1E+10,0], [-1E+5,0,0], [0,1E-5,1E-5], 1E+20, 1E+5)
+# System.add_object_by_parameters([0,0,0], [0,0,0], [0,0,1E-5], 1E+30, 1E+9)
+# System.add_object_by_parameters([0,1E+10,0], [1E+5,0,0], [0,1E-5,1E-5], 1E+20, 1E+5)
+# System.add_object_by_parameters([0,-1E+10,0], [-1E+5,0,0], [0,1E-5,1E-5], 1E+20, 1E+5)
+
+System.add_object_by_parameters([0,0,0],        [0,0,0],        [0,0,1E-5],     1E+30, 1E+9)
+System.add_object_by_parameters([0,1E+9,0],    [+1E+5,0,0],     [0,1E-5,1E-5],  1E+20, 1E+5)
+System.add_object_by_parameters([0,-1E+9,0],   [-1E+5,0,0],    [0,1E-5,1E-5],   1E+30, 1E+5)
+
+# System.add_object_by_parameters([0,0,0],    [0,0,0],            [0,0,1],    10000, 1)
+# System.add_object_by_parameters([0,+1,0],   [+81.7E-5,0,0],     [0,0,1],    10, 1)
+# System.add_object_by_parameters([0,-1,0],   [-81.7E-5,0,0],     [0,0,1],    10, 1)
 
 #print("All Interforces:", System.Calc_Forces())
 #print("System Energy:  ", System.Calc_Energy())
 
-for i in range(10):
+file = open("trajectories_data.txt", "w")
+
+for i in range(10000):
     System.Calc_Iteration()
-    print(System.objects[0].pos, System.objects[1].pos, System.objects[2].pos)
+    
+    for obj in System.objects:
+        file.write(str(obj.pos[0]) + " " + str(obj.pos[1]) + " " + str(obj.pos[2]) + " ")
+    file.write("\n")
+
+
+file.close()
+
+print("Finish")

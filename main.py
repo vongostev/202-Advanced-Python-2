@@ -16,21 +16,21 @@ class CosmicBody:
         self.vec_v = vec_v
         self.vec_p = vec_p
 
-    def gravitate(self, Star: Star):
+    def gravitate(self, Star):
         return -1 * G * self.mass * Star.mass * self.vec_p / np.power(np.linalg.norm(self.vec_p), 3)
 
-    def destroy(self, Star: Star):
+    def destroy(self, Star):
         if np.linalg.norm(self.vec_p) < Star.radius:
             self.mass = 0
             return 1
 
-    def move(self, Star: Star):
+    def move(self, Star):
         if self.destroy(Star) != 1:
             delta_v = self.gravitate(Star) * dt / self.mass
             self.vec_p = self.vec_p + self.vec_v * dt + delta_v * dt / 2
             self.vec_v = delta_v + self.vec_v
 
-    def kind_of_trajectory(self, Star: Star):
+    def kind_of_trajectory(self, Star):
         energy = self.mass * np.power(np.linalg.norm(self.vec_v), 2) / 2 - G * self.mass * Star.mass / np.linalg.norm(
             self.vec_p)
         if (energy > 1e-6):
@@ -39,7 +39,7 @@ class CosmicBody:
             return "ellipse"
         return "parabola"
 
-    def trajectory2D(self, Star: Star, start, end):
+    def trajectory2D(self,Star, start, end):
         x = []
         y = []
         for i in np.arange(start, end, dt):
@@ -48,7 +48,7 @@ class CosmicBody:
             self.move(Star)
         return [x, y]
 
-    def trajectory3D(self, Star: Star, start, end):
+    def trajectory3D(self, Star, start, end):
         x = []
         y = []
         z = []
@@ -59,7 +59,7 @@ class CosmicBody:
             self.move(Star)
         return [x, y, z]
 
-    def graph2D(self, Star: Star, start, end, bodies=None):
+    def graph2D(self, Star, start, end, bodies=None):
         track = self.trajectory2D(Star, start, end)
         plt.plot(track[0], track[1])
         if bodies != None:

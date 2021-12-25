@@ -109,9 +109,20 @@ earth = CosmicBody(m, np.array([0, 30.4e3]), np.array([1.47e11, 0]))
 print(earth.kind_of_trajectory(star))
 earth.graph2D(star, 0, 365 * 24 * 3600)
 
+"Разные тела, вылетающие с орбиты земли"
+earth = Star(m, 0)
+v_2 = np.sqrt(G * m / 6371e3)
+body1 = CosmicBody(1e3, np.array([7.91e3 / np.sqrt(2), 7.91e3 / np.sqrt(2), 0]),
+                     np.array([0, 0, 6371e3]))
+body2 = CosmicBody(1e3, np.array([v_2, v_2, 0]),
+                     np.array([0, 0, 6371e3]))
+body3 = CosmicBody(1e3, np.array([16.7e3 / np.sqrt(2), 16.7e3 / np.sqrt(2), 0]),
+                     np.array([0, 0, 6371e3]))
+CosmicBody.graph3D(body1, earth, 0, 3000, [body2, body3])
+
+
 if __name__ == '__main__':
     unittest.main()
-
 
 
 

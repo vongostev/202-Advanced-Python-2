@@ -7,17 +7,20 @@ Created on Sun Dec 26 14:16:23 2021
 import numpy as np
 import matplotlib.pyplot as plt
 
-#Constants
-G = 6.67 * 1e-11
+"""
+Constants and smth
+"""
+G = 6.67
+
 def Norm(vec):
     return (np.sum(vec ** 2))**(1/2)
 
 class Star():
     """
     Class desribes star. 
-    Placed in (0,0) and has 10000 kg mass, if doesn't mentioned another
+    Placed in (0,0) and has 10^3 kg mass, if doesn't mentioned another
     """
-    def __init__(self, mass: float = 1e8, xy = (0,0)):
+    def __init__(self, mass: float = 1e3, xy = (0,0)):
         self.mass = mass
         self.vec_p = np.array(xy)
     
@@ -28,6 +31,7 @@ class Star():
         return self.vec_p
 
 class CosmicBody():
+
     """
     Class desribes any CosmicBody. 
     Placed in (0,1000), has 10 kg mass and zero velosity, if doesn't mentioned another
@@ -35,6 +39,7 @@ class CosmicBody():
     P[m, m]
     V[m/s]
     """
+
     def __init__(self, mass: float = 10, vec_p = (0, 1000), vec_v = (0, 0)):
         self.mass = mass
         self.vec_p = np.array(vec_p)
@@ -48,7 +53,8 @@ class CosmicBody():
         self.vec_p = self.vec_p + self.vec_v * dt
         
     def grav(self, Cosmic1):
-        self.vec_v = self.vec_v - G * Cosmic1.getMass() * self.vec_p / (Norm(self.vec_p) ** 3)
+        M = Cosmic1.getMass()
+        self.vec_v = self.vec_v - G * M * self.vec_p / (Norm(self.vec_p) ** 3)
         
     def getMass(self):
         return self.mass
@@ -64,6 +70,40 @@ class CosmicBody():
     
 if __name__ == '__main__':    
 
+    def Motion_2D_2objects():
+        
+        """
+        Discrete motion. During time dt moves with constant velosity. Then momentum changes according to the Gravitational Law.
+        Time [sec]
+        Mass [kg]
+        P[m]
+        V[m/sec]
+        """
+        Sun = Star()
+        #должно работать при M = 10^8, v = 0,003652, r = 1000
+        Aster = CosmicBody(10, (0, 1000), (8.154,0))
+        x = [Aster.getPosition()[0]]
+        y = [Aster.getPosition()[1]]
+        dt = 0.2
+        n = 16000
+        t = 0
+        while t < dt*n:
+            Aster.grav(Sun)
+            Aster.move(dt)
+            x.append(Aster.getPosition()[0])
+            y.append(Aster.getPosition()[1])
+            
+            if (Norm(Aster.getPosition()) <= 15):
+                Aster.destroy()
+            t = t + dt
+            
+        # fig = plt.figure(figsize=(8, 6))
+        plt.plot(x, y, 'o--', linewidth=2)
+        plt.show()
+        # plt.plot(psqueezed_vacuum(2, 0, 30), 'v:', label='$r=2$')
+            
+            
+    
     def test_Star():
         Sun = Star(35, (3, 9))
         assert Sun.getMass() == 35
@@ -78,38 +118,6 @@ if __name__ == '__main__':
         # print (Tesla_Roadster.getVelosity())
         print("Test Tesla Motorspots is Ok")
     
-    def Motion_2D_2objects():
-        """
-        Discrete motion. During time dt moves with constant velosity. Then momentum changes according to the Gravitational Law.
-        Time [sec]
-        Mass [kg]
-        P[km, m]
-        V[km/sec]
-        """
-        Sun = Star()
-        Aster = CosmicBody(10, (0, 1000), (0.000000116,0))
-        x = [Aster.getPosition()[0]]
-        y = [Aster.getPosition()[1]]
-        dt = 2200
-        n = 9168
-        t = 0
-        while t < dt*n:
-            Aster.grav(Sun)
-            Aster.move(dt)
-            x.append(Aster.getPosition()[0])
-            y.append(Aster.getPosition()[1])
-            
-            if (Norm(Aster.getPosition()) <= 15):
-                Aster.destroy()
-            t = t + dt
-            
-        # fig = plt.figure(figsize=(8, 6))
-        plt.plot(x, y, 'o--', linewidth=2, label='$r=1.3$')
-        plt.show()
-        # plt.plot(psqueezed_vacuum(2, 0, 30), 'v:', label='$r=2$')
-            
-            
-        
     Motion_2D_2objects()
     test_Star()
     test_Body()

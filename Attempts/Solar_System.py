@@ -77,9 +77,6 @@ class CosmicBody():
     def getVelosity(self):
         return self.vec_v
 
-# def Destroy(star, body):
-#     if
-
 
 if __name__ == '__main__':
 
@@ -87,7 +84,11 @@ if __name__ == '__main__':
         """
         Discrete motion. During time dt moves with constant velosity. 
         Momentum changes according to the Gravitational Law.
-        Crirical velosity is 3.65. First test is less, second is more.
+        Crirical velosity is 3.65. 
+        1 ellipse < v_critical
+        2 apple < v_central
+        3 hyperbola > v_critical
+        
         Time [sec]
         Mass [kg]
         P[m]
@@ -115,6 +116,38 @@ if __name__ == '__main__':
                 t = t + dt
             plt.plot(x, y, '--', linewidth=1)
 
+    def test_2DMotion_2Bodies():
+        velosity = [(0.25, 0), (-0.25, 0)]
+        Ast1 = CosmicBody(10, (0, 100), velosity[0])
+        Ast2 = CosmicBody(10, (0,-100), velosity[1])
+        x1 = [Ast1.getPosition()[0]]
+        y1 = [Ast1.getPosition()[1]]
+        x2 = [Ast2.getPosition()[0]]
+        y2 = [Ast2.getPosition()[1]]
+        
+        dt = 0.2
+        n = 10000
+        t = 0
+        while t < dt*n:
+            Ast1.grav(dt, Ast2)
+            Ast2.grav(dt, Ast1)
+            Ast1.move(dt)
+            Ast2.move(dt)
+            x1.append(Ast1.getPosition()[0])
+            y1.append(Ast1.getPosition()[1])
+            x2.append(Ast2.getPosition()[0])
+            y2.append(Ast2.getPosition()[1])
+
+            if (Norm(Ast1.distance(Ast2)) <= 5):
+                Ast1.destroy()
+                Ast2.destroy()
+
+            t = t + dt
+        plt.plot(x1, y1, '--', linewidth=1)
+        plt.plot(x2, y2, '--', linewidth=1)       
+        
+        
+        
     def test_Star():
         Sun = Star(35, (3, 9))
         assert Sun.getMass() == 35
@@ -129,6 +162,7 @@ if __name__ == '__main__':
         # print (Tesla_Roadster.getVelosity())
         print("Test Tesla Motorspots is Ok")
 
-    Test_2DMotion_2objects()
+    # Test_2DMotion_2objects()
+    test_2DMotion_2Bodies()
     test_Star()
     test_Body()

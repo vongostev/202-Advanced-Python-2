@@ -10,7 +10,7 @@ import numba as nb
 
 G = 4 * np.pi**2 # в системе единиц "годы, массы Солнца, а.е."
 dt = 0.005
-crash_distance = 0.001
+crash_distance = 0.01
 #total_
 total_time = 10 #в годах
 dim = 3 #размерность задачи
@@ -210,14 +210,6 @@ class Star():
         """
         if (len(bodies) == 0):
             time = total_time #заканчивает процесс моделирования, если все тела столкнулись
-        # Задаем границы
-        ax.axes.set_xlim3d(-size, size)
-        ax.axes.set_ylim3d(-size, size)
-        ax.axes.set_zlim3d(-size, size)    
-
-        # Отображаем пустую фигуру
-        fig.show()
-        fig.canvas.draw()
 
         while ((time < total_time) and (max_r(bodies) < max_dist) ): 
             destroyed_bodies = self.move_system(bodies, time) 

@@ -1,5 +1,4 @@
 import unittest
-
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -204,6 +203,7 @@ class Tests(unittest.TestCase):
         body.graph2D(star, 0, 10000000)
         self.assertEqual(body.destroy(star), 1)
 
+
 G = 6.67e-11
 dt = 100
 m = 5.97e24
@@ -235,11 +235,5 @@ body3 = CosmicBody(1e3, np.array([16.7e3 / np.sqrt(2), 16.7e3 / np.sqrt(2), 0]),
                    np.array([0, 0, 6371e3]))
 CosmicBody.graph3D(body1, earth, 0, 3000, [body2, body3])
 
-
 if __name__ == '__main__':
     unittest.main()
-
-
-
-
-

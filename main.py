@@ -154,6 +154,7 @@ class CosmicBody:
         """
         track = self.trajectory2D(Star, start, end)
         plt.plot(track[0], track[1])
+        plt.scatter(0, 0, c='red')
         if bodies != None:
             for body in bodies:
                 track = body.trajectory2D(Star, start, end)
@@ -177,6 +178,7 @@ class CosmicBody:
         """
         track = self.trajectory3D(Star, start, end)
         ax = plt.axes(projection='3d')
+        ax.scatter(0, 0, c='red')
         ax.plot3D(track[0], track[1], track[2])
         if bodies != None:
             for body in bodies:
@@ -215,15 +217,22 @@ earth = CosmicBody(m, np.array([0, 30.4e3]), np.array([1.47e11, 0]))
 print(earth.kind_of_trajectory(star))
 earth.graph2D(star, 0, 365 * 24 * 3600)
 
+"Первые 3 планеты солнечной системы"
+star = Star(M, R)
+mercury = CosmicBody(3.33e23, np.array([0, 49.4e3]), np.array([4.6e10, 0]))
+venus = CosmicBody(4.87e24, np.array([0, 35e3]), np.array([1.07e11, 1]))
+earth = CosmicBody(m, np.array([0, 30.4e3]), np.array([1.5e11, 0]))
+CosmicBody.graph2D(mercury, star, 0, 365 * 24 * 900, [venus, earth])
+
 "Разные тела, вылетающие с орбиты земли"
 earth = Star(m, 0)
 v_2 = np.sqrt(G * m / 6371e3)
 body1 = CosmicBody(1e3, np.array([7.91e3 / np.sqrt(2), 7.91e3 / np.sqrt(2), 0]),
-                     np.array([0, 0, 6371e3]))
+                   np.array([0, 0, 6371e3]))
 body2 = CosmicBody(1e3, np.array([v_2, v_2, 0]),
-                     np.array([0, 0, 6371e3]))
+                   np.array([0, 0, 6371e3]))
 body3 = CosmicBody(1e3, np.array([16.7e3 / np.sqrt(2), 16.7e3 / np.sqrt(2), 0]),
-                     np.array([0, 0, 6371e3]))
+                   np.array([0, 0, 6371e3]))
 CosmicBody.graph3D(body1, earth, 0, 3000, [body2, body3])
 
 

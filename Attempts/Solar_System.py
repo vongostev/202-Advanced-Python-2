@@ -5,6 +5,7 @@ Created on Sun Dec 26 14:16:23 2021
 @author: grego
 """
 import numpy as np
+import matplotlib.pyplot as plt
 
 #Constants
 G = 6.67 * 1e-20
@@ -46,7 +47,7 @@ class CosmicBody():
         self.vec_p = self.vec_p + self.vec_v * dt
         
     def grav(self, Cosmic1):
-        self.vec_v = self.vec_v - G * Cosmic1.getMass * vec_p / ( np.sum(vec_p * vec_p) )^(3/2)
+        self.vec_v = self.vec_v - G * Cosmic1.getMass() * self.vec_p / ( np.sum(self.vec_p ** 2) )**(3/2)
         
     def getMass(self):
         return self.mass
@@ -83,13 +84,26 @@ if __name__ == '__main__':
         V[km/sec]
         """
         Sun = Star()
-        Aster = CosmicBody()
+        Aster = CosmicBody(1e4, (0,1e5), (0.000001, 0))
+        x = [Aster.getPosition()[0]]
+        y = [Aster.getPosition()[1]]
         dt = 60
-        n = 4000
+        n = 18
         t = 0
         while t < dt*n:
+            Aster.grav(Sun)
+            Aster.move(dt)
+            x.append(Aster.getPosition()[0])
+            y.append(Aster.getPosition()[1])
+            t = t + dt
+            
+        # fig = plt.figure(figsize=(8, 6))
+        plt.plot(x, y, 'o--', linewidth=2, label='$r=1.3$')
+        plt.show()
+        # plt.plot(psqueezed_vacuum(2, 0, 30), 'v:', label='$r=2$')
+            
             
         
-        
+    straight_Motion()
     test_Star()
     test_Body()

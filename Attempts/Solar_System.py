@@ -6,11 +6,13 @@ Created on Sun Dec 26 14:16:23 2021
 """
 import numpy as np
 
+#Constants
+G = 6.67 * 1e-20
 
 class Star():
     """
     Class desribes star. 
-    Situated in (0,0) and has solar mass, if doesn't mentioned another
+    Placed in (0,0) and has solar mass, if doesn't mentioned another
     """
     def __init__(self, mass: float = 1e30, xy = (0,0)):
         self.mass = mass
@@ -25,7 +27,7 @@ class Star():
 class CosmicBody():
     """
     Class desribes any CosmicBody. 
-    Situated in (1000,1000), has 100 kg mass and zero velosity, if doesn't mentioned another
+    Placed in (1000,1000), has 100 kg mass and zero velosity, if doesn't mentioned another
     Mass [kg]
     P[km, km]
     V[km/s]
@@ -44,7 +46,7 @@ class CosmicBody():
         self.vec_p = self.vec_p + self.vec_v * dt
         
     def grav(self, Cosmic1):
-        self.vec_v = 
+        self.vec_v = self.vec_v - G * Cosmic1.getMass * vec_p / ( np.sum(vec_p * vec_p) )^(3/2)
         
     def getMass(self):
         return self.mass

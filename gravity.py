@@ -4,6 +4,7 @@ import random
 from mpl_toolkits import mplot3d
 from numba import njit, prange
 import unittest
+import time
 #import numba
 G = 0.1
 dt = 0.001
@@ -54,13 +55,18 @@ class CosmicBody:
             position_x.append(self.vec_r[0])
             position_y.append(self.vec_r[1])
             self.track(Star)
+            #print(self.vec_v, self.vec_r)
         #было заменено с while на arange, так быстрее получилось
         return [position_x, position_y] 
     "функция описывает траекторию 2D тела за [t1, t2] секунд"
     
     #@njit(fastmath=True, cache=True,parallel=True)
-    def graf_trajectory_2D(self, Star : Star, time_beggining, time_stop):
-        trajectory = self.trajectory_2D(Star, time_beggining, time_stop)  
+    def graf_trajectory_2D(self, Star : Star, time_beggining, time_stop, boost = 0):
+        if (boost == 0):  
+            trajectory = self.trajectory_2D(Star, time_beggining, time_stop)  
+        if(boost == 1):
+            trajectory = fast_2D_Trajectoty(self.mass, self.vec_v, self.vec_r, Star.mass, time_beggining, time_stop, G, dt)
+        #здесь мы выбираем, будем ли мы ускорять функцию или нет
         plt.plot(trajectory[0], trajectory[1], 'ro')
         plt.show()
     "строит график для одной кометы в 2D"
@@ -125,10 +131,33 @@ class CosmicBody:
         plt.show()
     "строит график для нескольких тел в 3D"
     
-    
-    
-"В этой части кода происходить будет ускорение кода, видимо в классах это нельзя реализовать"
+#-----------------------------------------------------------------    
+"В этой части кода происходить будет ускорение кода"
+
 "думал думал, только изменил while на np.range"
+
+@njit('float64[::, ::](float64, float64[:], float64[:], float64, float64, float64, float64, float64)', fastmath = True, cache = True)
+def fast_2D_Trajectoty(mass_CosmicBody, vec_v, vec_r, star_mass, time_beggining, time_end, G, dt):
+    if abs(vec_r[0]) > 0.01 or abs(vec_r[1]) > 0.01:
+        norm_vec_r = np.linalg.norm(vec_r)
+        delta_v = -G * star_mass * vec_r / norm_vec_r ** 3 * dt
+        vec_r = vec_r + vec_v * dt + delta_v * dt * dt / 2
+        vec_v = delta_v + vec_v
+        vec_r = vec_r + vec_v
+        position = np.array([[vec_r[0]], [vec_r[1]]], dtype = np.float64)
+    for i in np.arange(time_beggining, time_end, dt):
+        norm_vec_r = np.linalg.norm(vec_r)
+        if abs(vec_r[0]) > 0.01 or abs(vec_r[1]) > 0.01:
+            delta_v = - G * star_mass * vec_r / norm_vec_r ** 3 * dt
+            vec_r = vec_r + vec_v * dt + delta_v * dt * dt / 2
+            vec_v = delta_v + vec_v
+            position = np.append(position, np.array([[vec_r[0]], [vec_r[1]]], dtype = np.float64), axis = 1)
+    return position
+
+
+"эта функция замедлила код в 10 раз........................"
+
+
 
 
 class TestGrafic(unittest.TestCase):
@@ -143,6 +172,7 @@ class TestGrafic(unittest.TestCase):
         print("---------------")
     
     def test_2D_ellipse(self):
+        #t0 = time.time()
         G = 0.1
         dt = 0.001
         t_beg = 0
@@ -150,6 +180,8 @@ class TestGrafic(unittest.TestCase):
         star = Star(5)
         a2 = CosmicBody(11, np.array([0, -0.3]), np.array([-5, -2]))
         a2.graf_trajectory_2D(star, t_beg, t_end)
+        #t1 = time.time() - t0
+        #print(t1)
         print(a2.what_trajectory(star))
         print("---------------")
         
@@ -227,105 +259,23 @@ class TestGrafic(unittest.TestCase):
         a3 = CosmicBody(11, np.array([0, -0.3, -0.4]), np.array([-5, -2, 3]))
         a2.graf_trajectory_3D_more(star, t_beg, t_end, [a3])
         "не забываем писать время, когда второе космическое тело появилось"
-        
+    def test_boost():
+        G = 0.1
+        dt = 0.001
+        t_beg = 0
+        t_end = 110
+        star = Star(5)
+        a2 = CosmicBody(11., np.array([0., -0.3]), np.array([-5., -2.]))
+        t0 = time.time()
+        a2.graf_trajectory_2D(star, t_beg, t_end)
+        t1 = time.time()
+        print(t1 - t0)
+        a2 = CosmicBody(11., np.array([0., -0.3]), np.array([-5., -2.]))
+        a2.graf_trajectory_2D(star, t_beg, t_end, 1)
+        print(time.time() - t1)
         
         
 if __name__ == "__main__":
     unittest.main()
     
     
-    #сделал юнит тесты
-"""
-    "тесты"
-    
-    "2D"
-    
-    "падение на звезду"
-    G = 0.1
-    dt = 0.001
-    t_beg = 0
-    t_end = 20
-    a1 = CosmicBody(2, np.array([0, 0]), np.array([3, 4]))
-    star = Star(5)
-    a1.graf_trajectory_2D(star, t_beg, t_end)
-    
-    "эллипс"
-    G = 0.1
-    dt = 0.001
-    t_beg = 0
-    t_end = 110
-    a2 = CosmicBody(11, np.array([0, -0.3]), np.array([-5, -2]))
-    a2.graf_trajectory_2D(star, t_beg, t_end)
-    print(a2.what_trajectory(star))
-
-    "гипербола"
-    G = 0.1
-    dt = 0.001
-    t_beg = 0
-    t_end = 20
-    a3 = CosmicBody(11, np.array([-1, 1/3]), np.array([10, -2]))
-    a3.graf_trajectory_2D(star, t_beg, t_end)
-    print(a3.what_trajectory(star))
-
-
-    "Рандомим"
-    G = random.random() * 10
-    dt = 0.001
-    t_beg = 0
-    t_end = 10
-    star = Star(random.random() * 10)
-    a4 = CosmicBody(random.random() * 10, np.array([random.random(), random.random()]), np.array([random.random() * 2, random.random() * 2]))
-    a4.graf_trajectory_2D(star, t_beg, t_end)
-    print(a4.what_trajectory(star))
-
-    "Несколько тел"
-    G = 0.1
-    dt = 0.001
-    star = Star(5)
-    t_beg = 0
-    t_end = 110
-    a2 = CosmicBody(11, np.array([0, -0.3]), np.array([-5, -2]))
-    a3 = CosmicBody(11, np.array([-1, 1/3]), np.array([10, -2]))
-    a2.graf_trajectory_2D_more(star, t_beg, t_end, [a3])
-    
-    
-    "3D"
-    "v = 0"
-    G = 0.1
-    dt = 0.001
-    t_beg = 0
-    t_end = 40
-    a1 = CosmicBody(2, np.array([0, 0, 0]), np.array([3, 4, 5]))
-    star = Star(5)
-    a1.graf_trajectory_3D_more(star, t_beg, t_end)
-
-
-    "Эллипс"
-    G = 0.1
-    dt = 0.001
-    t_beg = 0
-    t_end = 220
-    a2 = CosmicBody(11, np.array([0, -0.3, -0.1]), np.array([-5, -2, 3]))
-    a2.graf_trajectory_3D_more(star, t_beg, t_end)
-    print(a2.what_trajectory(star))
-
-    "Гипербола"
-    G = 0.1
-    dt = 0.001
-    t_beg = 0
-    t_end = 220
-    a2 = CosmicBody(11, np.array([0, -0.3, -0.4]), np.array([-5, -2, 3]))
-    a2.graf_trajectory_3D_more(star, t_beg, t_end)
-    print(a2.what_trajectory(star))
-
-    "несколько тел"
-    G = 0.1
-    dt = 0.001
-    t_beg = 0
-    t_end = 220
-    a2 = CosmicBody(11, np.array([0, -0.3, -0.1]), np.array([-5, -2, 3]))
-    a3 = CosmicBody(11, np.array([0, -0.3, -0.4]), np.array([-5, -2, 3]))
-    a2.graf_trajectory_3D_more(star, t_beg, t_end, [a3])
-"""
-    
-        

@@ -5,14 +5,14 @@ Created on Sun Dec 26 14:16:23 2021
 @author: grego
 """
 
-class Star(mass: float):
+class Star():
     """
     Class desribes star. 
     Situated in (0,0) and has solar mass, if doesn't mentioned another
     """
-    def __init__(self, mass = 10^30, xy = (0, 0)):
+    def __init__(self, mass: float = 1e30, xy = (0, 0)):
         self.mass = mass
-        self.xyz = xy
+        self.xy = xy
     
     def getMass(self):
         return self.mass
@@ -21,4 +21,12 @@ class Star(mass: float):
         return self.xy
 
 
-    
+if __name__ == '__main__':    
+
+    def test_Star():
+        Sun = Star(35, (3, 9))
+        assert Sun.getMass() == 35
+        assert Sun.getPosition() == (3,9)
+        print("test_Star is Ok")        
+        
+    test_Star()

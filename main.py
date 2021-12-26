@@ -6,31 +6,85 @@ import matplotlib.pyplot as plt
 
 class Star:
     def __init__(self, mass: float, radius: float):
+        """
+        Создание звезды.
+
+        Parameters
+        ----------
+        mass : float
+            Масса звезды.
+        radius : float
+            Радиус звезды.
+        """
         self.mass = mass
         self.radius = radius
 
 
 class CosmicBody:
     def __init__(self, mass: float, vec_v: np.ndarray, vec_p: np.ndarray):
+        """
+        Создание звезды.
+
+        Parameters
+        ----------
+        mass : float
+            Масса звезды
+        vec_v : np.ndarray
+            Вектор скорости тела
+        vec_p : np.ndarray
+            Радиус-вектор положения тела
+        """
         self.mass = mass
         self.vec_v = vec_v
         self.vec_p = vec_p
 
     def gravitate(self, Star):
+        """
+        Расчёт силы взаимодействия между звездой и телом.
+
+        Parameters
+        ----------
+        Star : Star
+            звезда.
+        """
         return -1 * G * self.mass * Star.mass * self.vec_p / np.power(np.linalg.norm(self.vec_p), 3)
 
     def destroy(self, Star):
+        """
+        Уничтожение тела в результате падения на звезду.
+
+        Parameters
+        ----------
+        Star : Star
+            звезда.
+        """
         if np.linalg.norm(self.vec_p) < Star.radius:
             self.mass = 0
             return 1
 
     def move(self, Star):
+        """
+        Обновление координат и скорости тела через время dt.
+
+        Parameters
+        ----------
+        Star : Star
+            звезда.
+        """
         if self.destroy(Star) != 1:
             delta_v = self.gravitate(Star) * dt / self.mass
             self.vec_p = self.vec_p + self.vec_v * dt + delta_v * dt / 2
             self.vec_v = delta_v + self.vec_v
 
     def kind_of_trajectory(self, Star):
+        """
+        Определение вида траектории тела.
+
+        Parameters
+        ----------
+        Star : Star
+            звезда.
+        """
         energy = self.mass * np.power(np.linalg.norm(self.vec_v), 2) / 2 - G * self.mass * Star.mass / np.linalg.norm(
             self.vec_p)
         if (energy > 1e-6):
@@ -39,7 +93,19 @@ class CosmicBody:
             return "ellipse"
         return "parabola"
 
-    def trajectory2D(self,Star, start, end):
+    def trajectory2D(self, Star, start, end):
+        """
+        Получение 2D координат траектории тела.
+
+        Parameters
+        ----------
+        Star : Star
+            звезда.
+        start : float
+            начальное время.
+        end : float
+            конечное время.
+        """
         x = []
         y = []
         for i in np.arange(start, end, dt):
@@ -49,6 +115,18 @@ class CosmicBody:
         return [x, y]
 
     def trajectory3D(self, Star, start, end):
+        """
+        Получение 3D координат траектории тела.
+
+        Parameters
+        ----------
+        Star : Star
+            звезда.
+        start : float
+            начальное время.
+        end : float
+            конечное время.
+        """
         x = []
         y = []
         z = []
@@ -60,6 +138,20 @@ class CosmicBody:
         return [x, y, z]
 
     def graph2D(self, Star, start, end, bodies=None):
+        """
+        Построение 2D графика траектории тел.
+
+        Parameters
+        ----------
+        Star : Star
+            звезда.
+        start : float
+            начальное время.
+        end : float
+            конечное время.
+        bodies : list
+            список космических тел.
+        """
         track = self.trajectory2D(Star, start, end)
         plt.plot(track[0], track[1])
         if bodies != None:
@@ -68,7 +160,21 @@ class CosmicBody:
                 plt.plot(track[0], track[1])
         plt.show()
 
-    def graph3D(self, Star: Star, start, end, bodies=None):
+    def graph3D(self, Star, start, end, bodies=None):
+        """
+        Построение 3D графика траектории тел.
+
+        Parameters
+        ----------
+        Star : Star
+            звезда.
+        start : float
+            начальное время.
+        end : float
+            конечное время.
+        bodies : list
+            список космических тел.
+        """
         track = self.trajectory3D(Star, start, end)
         ax = plt.axes(projection='3d')
         ax.plot3D(track[0], track[1], track[2])

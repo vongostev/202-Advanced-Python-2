@@ -52,9 +52,9 @@ class CosmicBody():
     def move(self, dt):
         self.vec_p = self.vec_p + self.vec_v * dt
         
-    def grav(self, Cosmic1):
+    def grav(self, Cosmic1, dt):
         M = Cosmic1.getMass()
-        self.vec_v = self.vec_v - G * M * self.vec_p / (Norm(self.vec_p) ** 3)
+        self.vec_v = self.vec_v - G * M * self.vec_p * dt / (Norm(self.vec_p) ** 3)
         
     def getMass(self):
         return self.mass
@@ -80,15 +80,15 @@ if __name__ == '__main__':
         V[m/sec]
         """
         Sun = Star()
-        #должно работать при M = 10^8, v = 0,003652, r = 1000
-        Aster = CosmicBody(10, (0, 1000), (8.154,0))
+        Aster = CosmicBody(0.1, (0, 1000), (3.4,0))
+        #hyper: 
         x = [Aster.getPosition()[0]]
         y = [Aster.getPosition()[1]]
-        dt = 0.2
-        n = 16000
+        dt = 0.02
+        n = 189800
         t = 0
         while t < dt*n:
-            Aster.grav(Sun)
+            Aster.grav(Sun, dt)
             Aster.move(dt)
             x.append(Aster.getPosition()[0])
             y.append(Aster.getPosition()[1])

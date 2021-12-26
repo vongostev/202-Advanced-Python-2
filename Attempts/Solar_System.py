@@ -39,22 +39,24 @@ class CosmicBody():
     P[m, m]
     V[m/s]
     """
-
+    
     def __init__(self, mass: float = 10, vec_p = (0, 1000), vec_v = (0, 0)):
+        self.exist = 1
         self.mass = mass
         self.vec_p = np.array(vec_p)
         self.vec_v = np.array(vec_v)
         
     def destroy(self):
+        self.exist = 0
         self.mass = 0
         self.vec_v = (0, 0)
     
     def move(self, dt):
-        self.vec_p = self.vec_p + self.vec_v * dt
+        self.vec_p = self.vec_p + self.vec_v * dt * self.exist
         
     def grav(self, Cosmic1, dt):
         M = Cosmic1.getMass()
-        self.vec_v = self.vec_v - G * M * self.vec_p * dt / (Norm(self.vec_p) ** 3)
+        self.vec_v = self.vec_v - G * M * self.vec_p * dt / (Norm(self.vec_p) ** 3) * self.exist
         
     def getMass(self):
         return self.mass
@@ -81,8 +83,8 @@ if __name__ == '__main__':
         P[m]
         V[m/sec]
         """
-        velosity = [(3.5, 0), (3.7, 0)]
-        for i in (0,1):
+        velosity = [(3.2, 0), (0.27, 0), (3.9, 0)]
+        for i in (0,1, 2):
             
             Sun = Star()
             Aster = CosmicBody(0.1, (0, 1000), velosity[i])
@@ -97,10 +99,11 @@ if __name__ == '__main__':
                 x.append(Aster.getPosition()[0])
                 y.append(Aster.getPosition()[1])
                 
-                if (Norm(Aster.getPosition()) <= 15):
+                if (Norm(Aster.getPosition()) <= 45):
                     Aster.destroy()
+                    
                 t = t + dt    
-            plt.plot(x, y, 'o--', linewidth=1)
+            plt.plot(x, y, '--', linewidth=1)
                        
     
     def test_Star():

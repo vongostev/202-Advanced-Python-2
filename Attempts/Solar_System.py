@@ -70,39 +70,38 @@ class CosmicBody():
     
 if __name__ == '__main__':    
 
-    def Motion_2D_2objects():
+    def Test_2DMotion_2objects():
         
         """
-        Discrete motion. During time dt moves with constant velosity. Then momentum changes according to the Gravitational Law.
+        Discrete motion. During time dt moves with constant velosity. 
+        Momentum changes according to the Gravitational Law.
+        Crirical velosity is 3.65. First test is less, second is more.
         Time [sec]
         Mass [kg]
         P[m]
         V[m/sec]
         """
-        Sun = Star()
-        Aster = CosmicBody(0.1, (0, 1000), (3.4,0))
-        #hyper: 
-        x = [Aster.getPosition()[0]]
-        y = [Aster.getPosition()[1]]
-        dt = 0.02
-        n = 189800
-        t = 0
-        while t < dt*n:
-            Aster.grav(Sun, dt)
-            Aster.move(dt)
-            x.append(Aster.getPosition()[0])
-            y.append(Aster.getPosition()[1])
+        velosity = [(3.5, 0), (3.7, 0)]
+        for i in (0,1):
             
-            if (Norm(Aster.getPosition()) <= 15):
-                Aster.destroy()
-            t = t + dt
-            
-        # fig = plt.figure(figsize=(8, 6))
-        plt.plot(x, y, 'o--', linewidth=2)
-        plt.show()
-        # plt.plot(psqueezed_vacuum(2, 0, 30), 'v:', label='$r=2$')
-            
-            
+            Sun = Star()
+            Aster = CosmicBody(0.1, (0, 1000), velosity[i])
+            x = [Aster.getPosition()[0]]
+            y = [Aster.getPosition()[1]]
+            dt = 0.2
+            n = 28000
+            t = 0
+            while t < dt*n:
+                Aster.grav(Sun, dt)
+                Aster.move(dt)
+                x.append(Aster.getPosition()[0])
+                y.append(Aster.getPosition()[1])
+                
+                if (Norm(Aster.getPosition()) <= 15):
+                    Aster.destroy()
+                t = t + dt    
+            plt.plot(x, y, 'o--', linewidth=1)
+                       
     
     def test_Star():
         Sun = Star(35, (3, 9))
@@ -118,6 +117,6 @@ if __name__ == '__main__':
         # print (Tesla_Roadster.getVelosity())
         print("Test Tesla Motorspots is Ok")
     
-    Motion_2D_2objects()
+    Test_2DMotion_2objects()
     test_Star()
     test_Body()

@@ -14,29 +14,43 @@ class Star():
     """
     def __init__(self, mass: float = 1e30, xy = (0,0)):
         self.mass = mass
-        self.xy = np.array(xy)
+        self.vec_p = np.array(xy)
     
     def getMass(self):
         return self.mass
     
     def getPosition(self):
-        return self.xy
+        return self.vec_p
 
 class CosmicBody():
     """
     Class desribes any CosmicBody. 
     Situated in (1000,1000), has 100 kg mass and zero velosity, if doesn't mentioned another
+    Mass [kg]
+    P[km, km]
+    V[km/s]
     """
-    def __init__(self, mass: float = 100, xy = (1000, 1000), vec_v = (0,0)):
+    def __init__(self, mass: float = 1e4, vec_p = (0, 1e5), vec_v = (0,0)):
         self.mass = mass
-        self.xy = np.array(xy)
+        self.vec_p = np.array(vec_p)
         self.vec_v = np.array(vec_v)
+        
+    def destroy(self):
+        self.mass = 0
+        self.vec_p = 0
+        self.vec_v = 0
     
+    def move(self, dt):
+        self.vec_p = self.vec_p + self.vec_v * dt
+        
+    def grav(self, Cosmic1):
+        self.vec_v = 
+        
     def getMass(self):
         return self.mass
     
     def getPosition(self):
-        return self.xy
+        return self.vec_p
     
     def getVelosity(self):
         return self.vec_v
@@ -52,11 +66,28 @@ if __name__ == '__main__':
         print("test_Star is Ok")        
     
     def test_Body():
-        Tesla_Roadster = CosmicBody(1814, (5400, 6400), (100, 200))
+        Tesla_Roadster = CosmicBody(1814, (0, 6400), (7.91, 0))
         assert Tesla_Roadster.getMass() == 1814
         # print (Tesla_Roadster.getPosition())
         # print (Tesla_Roadster.getVelosity())
         print("Test Tesla Motorspots is Ok")
+    
+    def straight_Motion():
+        """
+        Discrete motion. During time dt moves with constant velosity. Then momentum changes according to the Gravitational Law.
+        Time [sec]
+        Mass [kg]
+        P[km, km]
+        V[km/sec]
+        """
+        Sun = Star()
+        Aster = CosmicBody()
+        dt = 60
+        n = 4000
+        t = 0
+        while t < dt*n:
+            
+        
         
     test_Star()
     test_Body()

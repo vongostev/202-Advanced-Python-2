@@ -308,6 +308,29 @@ class ObjectSystem:
         for obj in self.objects:
             obj.ForceUpdateTrajectory(self.T)
     
+    #------------------------------------------------------------------------------------------------------------------------
+    
+    def AnalizeOrbit(self, obj):
+        Energy = 0;
+        
+        for obj_ in self.objects:
+            if (obj.Position[0] != obj_.Position[0]) or (obj.Position[1] != obj_.Position[1]) or (obj.Position[2] != obj_.Position[2]):
+                Energy = Energy - GravityConst * obj.Mass * obj_.Mass / np.linalg.norm(obj.Position - obj_.Position)
+                
+        Energy = Energy + 0.5 * obj.Mass * (np.linalg.norm(obj.Velocity)**2.0)
+        
+        if Energy < 0:
+            print("Method1: Elipsoid orbit      ( Energy =", Energy, ")")
+        if Energy == 0:
+            print("Method1: Paraboloid orbit    ( Energy =", Energy, ")")
+        if Energy > 0:
+            print("Method1: Hyperboloid orbit   ( Energy =", Energy, ")")
+            
+    def AnalizeOrbits(self):
+        for obj in self.objects:
+            print("Object", end="")
+            self.AnalizeOrbit(obj)
+    
     #------------------------------------------------------------------------------------------------------------------------    
     
     def print_objects(self):
@@ -441,12 +464,12 @@ class ObjectSystem:
 
                 for n in range(len(T)):    
                     if T[n] <= (time):
-                        N = n + 1
+                        N = n - 1
                         break
 
                 for n in range(N, len(T)):
                     if T[n] <= (time - trace_time):
-                        L = n + 1
+                        L = n - 1
                         break
                         
                 X = X1[N:][:L-N+1]
@@ -457,7 +480,7 @@ class ObjectSystem:
                     break
 
                 if(L <= 0):
-                    L = N - 1
+                    L = 0
                     
                 Xp = (X1[N + 1] - X1[N]) * (time - T[N]) / (T[N + 1] - T[N]) + X1[N]
                 Yp = (Y1[N + 1] - Y1[N]) * (time - T[N]) / (T[N + 1] - T[N]) + Y1[N]

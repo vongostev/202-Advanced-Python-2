@@ -7,6 +7,7 @@ Created on Sun Dec 26 14:16:23 2021
 import numpy as np
 import matplotlib.pyplot as plt
 from random import random
+from math import fabs
 
 """
 Constants and smth
@@ -27,8 +28,18 @@ def Norm(vec):
     Норму вектора.
 
     """
-    return (np.sum(vec ** 2))**(1/2)
+    return (np.sum(np.array(vec) ** 2))**(1/2)
 
+def rand_xy(ispositive = 0, maximum=3):
+    """
+    Generates pair of random pumbers in:
+        (-maximim, maximum) ispositive = 0            
+        (   0    , maximum) ispositive = 1
+    """
+    if ispositive == 0:
+        return( ( (maximum * (2 * random() - 1)), (maximum * (2 * random() - 1)))) 
+    else:
+        return ( (maximum*random(), maximum*random()) )       
 
 class Star():
     """
@@ -46,7 +57,6 @@ class Star():
 
     def getPosition(self):
         return self.vec_p
-
 
 class CosmicBody():
 
@@ -137,6 +147,8 @@ if __name__ == '__main__':
         V[m/sec]
         """
         velosity = [(3.2, 0), (0.27, 0), (3.9, 0)]
+        plt.show()
+        plt.plot(0,0,'o--', color = 'y')
         for i in (0, 1, 2):
 
             Sun = Star()
@@ -235,12 +247,6 @@ if __name__ == '__main__':
         plt.plot(x2, y2, 'o--', linewidth=1)
         assert Ast1.exist == 0
         print("Test Destruction is Ok")
-        
-    def rand_xy(ispositive = 0, maximum=3):
-        if ispositive == 0:
-            return( ( (maximum * (2 * random() - 1)), (maximum * (2 * random() - 1)))) 
-        else:
-            return ( (maximum*random(), maximum*random()) )            
                    
     def test_3randomBodies():
         """
@@ -291,7 +297,40 @@ if __name__ == '__main__':
         
         for i in range(3):
             plt.plot(x[i], y[i], '--', linewidth=1)
+       
+    def test_trajectory():
         
+        Sun = Star()
+        velosity = rand_xy(0, 10)
+        print(velosity)
+        coordinates = rand_xy(0, 1000)
+        mass = 0.1
+        energy = mass * ((Norm(velosity)**2/ 2 - G*Sun.getMass()/Norm(coordinates)))
+        if fabs(energy) < 0.00001:
+            print("Parabolic")
+        elif energy > 0:
+            print("Hyperbolic")
+        else:
+            print("Elliptical")
+        Aster = CosmicBody(mass, coordinates, velosity)
+        x = [Aster.getPosition()[0]]
+        y = [Aster.getPosition()[1]]
+        dt = 0.02
+        n = 28000
+        t = 0
+        while t < dt*n:
+            Aster.grav(dt, Sun)
+            Aster.move(dt)
+            x.append(Aster.getPosition()[0])
+            y.append(Aster.getPosition()[1])
+
+            if (Norm(Aster.getPosition()) <= 45):
+                Aster.destroy()
+
+            t = t + dt
+        plt.show()
+        plt.plot(x, y, '--', linewidth=1)
+        plt.plot(0, 0, 'o--', color = 'y')
         
     def test_Star():
         Sun = Star(35, (3, 9))
@@ -306,9 +345,10 @@ if __name__ == '__main__':
         # print (Tesla_Roadster.getVelosity())
         print("Test Tesla Motorspots is Ok")
 
-    # test_2DMotion_StarBody()
+    test_2DMotion_StarBody()
     # test_2DMotion_2Bodies()
     # test_destruction()
     # test_3randomBodies()
+    test_trajectory()
     test_Star()
     test_Body()

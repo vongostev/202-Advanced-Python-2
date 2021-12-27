@@ -1,20 +1,8 @@
 # -*- coding: utf-8 -*-
 
-import matplotlib.pyplot as plt
-
-from celluloid import Camera
-from IPython.display import Image
-
-import random
 import numpy as np
 
 import math
-
-import colorsys
-
-from statistics import mean
-
-import time as tm
 
 
 

@@ -3,7 +3,6 @@
 import matplotlib.pyplot as plt
 
 from celluloid import Camera
-from IPython.display import Image
 
 import random
 import numpy as np
@@ -14,13 +13,43 @@ import colorsys
 
 from statistics import mean
 
-import time as tm
+
+from numba import jit
+from numba import njit
 
 
 from Object import Object
 
 
 GravityConst = 6.67E-11
+
+
+
+@jit(nopython=True)
+def CalcForces_func(positions, masses):
+    forces = np.zeros((len(positions), 3))
+    for i in range(len(positions)):
+        for q in range(i + 1, len(positions)):
+            ForceVec = np.array([0.0, 0.0, 0.0])
+            DistanceVec = (positions[i] - positions[q])
+            DistanceMod = np.linalg.norm(DistanceVec)
+            ForceVec = -GravityConst * (masses[i] * masses[q] * DistanceVec) / (DistanceMod * DistanceMod * DistanceMod)
+            forces[i] = forces[i] + ForceVec
+            forces[q] = forces[q] - ForceVec
+    return forces
+    
+@jit(nopython=True)
+def CalcEnergy_func(positions, velocities, masses):
+    energy = 0;
+    for i in range(len(masses)):
+        energy = energy + 0.5 * masses[i] * (np.linalg.norm(velocities[i])**2)
+        for q in range(i + 1, len(masses)):
+            energy = energy - 6.67E-11 * masses[i] * masses[q] / np.linalg.norm(positions[i] - positions[q])
+    return energy
+
+
+
+
 
 
 class ObjectSystem:
@@ -132,17 +161,6 @@ class ObjectSystem:
         
         self.Add_Object_period(period, mass, radius, coef)
         
-    def Add_new_mass_center(self, radius, power=1.0, position=[0.,0.,0.], velocity=[0.,0.,0.]):
-        FullMass = 0
-        
-        for obj in self.objects:
-            FullMass = FullMass + obj.Mass
-            
-        mass = FullMass * (10**power)
-        
-        t_obj = Object(position, velocity, mass, radius)
-        self.Add_Object(t_obj)
-        
     #------------------------------------------------------------------------------------------------------------------------
         
     def Add_Planet_orbit(self, orbit_rad, radius, coef = 0.707):
@@ -158,82 +176,29 @@ class ObjectSystem:
         
         self.Add_Object_orbit(orbit_rad, mass, radius, coef)
         
-    def Add_Star_orbit(self, orbit_rad, radius, coef = 0.707):
-        FullMass = 0
-        
-        for obj in self.objects:
-            FullMass = FullMass + obj.Mass
-            
-        self.Add_Object_orbit(orbit_rad, FullMass, radius, coef)
-        
-    def Add_Satellite(self, obj, radius, coef = 0.707):
-        FullMass = 0;
-        WeigMass = np.array([0, 0, 0])
-        
-        for obj in self.objects:
-            FullMass = FullMass + obj.Mass
-            WeigMass = WeigMass + obj.Mass * obj.Position
-        
-        CMassVec = WeigMass / FullMass
-        
-        ObjRad = np.linalg.norm(obj.Position - CMassVec)
-        
-        MaxSatRad = 0.1 * obj.Mass * ObjRad / FullMass
-        #MinSatRad = obj.Radius * 2.0
-        MinSatRad = 0
-        
-        if(MaxSatRad <= MinSatRad):
-            print("Cant Create Satellite")
-            return
-        
-        SatRad = random.random()*(MaxSatRad - MinSatRad) + MinSatRad
-        
-        RanNum1 = random.random() * 10.
-        RanNum2 = random.random() * 5.0 + 3.0
-        
-        SatMass = RanNum1 * (obj.Mass / (10**RanNum2))
-        
-        AngAzi = random.random() * 2.0 * np.pi
-        AngVer = random.random() * 2.0 * np.pi
-        RanDir1 = np.array([math.cos(AngVer)*math.cos(AngAzi), math.cos(AngVer)*math.sin(AngAzi), math.sin(AngVer)])
-        
-        SatPosition = obj.Position + RanDir1 * SatRad
-        
-        AngAzi = random.random() * 2.0 * np.pi
-        AngVer = random.random() * 2.0 * np.pi
-        RanDir2 = np.array([math.cos(AngVer)*math.cos(AngAzi), math.cos(AngVer)*math.sin(AngAzi), math.sin(AngVer)])
-        
-        PerDir = np.cross(RanDir1, RanDir2)
-        PerDir = PerDir / np.linalg.norm(PerDir)
-        
-        SatVelocityMod = coef * math.sqrt(GravityConst * obj.Mass / SatRad)
-        
-        SatVelocity = PerDir * SatVelocityMod
-        
-        t_obj = Object(SatPosition, SatVelocity, SatMass, radius)
-        self.Add_Object(t_obj)
-        
-    def Add_Asteroid(self, position, velocity, mass, radius):
-        self.Add_Object(position, velocity, mass, radius)
-        
     #------------------------------------------------------------------------------------------------------------------------
     
     def CalcForces(self):
-        forces = [np.array([0.0,0.0,0.0])] * len(self.objects)
+        positions = np.zeros((len(self.objects), 3))
+        masses    = np.zeros(len(self.objects))
+        
         for i in range(len(self.objects)):
-            for q in range(i + 1, len(self.objects)):
-                IForce = self.objects[i].CalcForce(self.objects[q])
-                forces[i] = forces[i] + IForce
-                forces[q] = forces[q] - IForce
-        return forces
+            positions[i]    = self.objects[i].Position
+            masses[i]       = self.objects[i].Mass
+            
+        return CalcForces_func(positions, masses)
     
     def CalcEnergy(self):
-        energy = 0;
+        positions   = np.zeros((len(self.objects), 3))
+        velocities  = np.zeros((len(self.objects), 3))
+        masses      = np.zeros(len(self.objects))
+        
         for i in range(len(self.objects)):
-            energy = energy + 0.5 * self.objects[i].Mass * (np.linalg.norm(self.objects[i].Velocity)**2)
-            for q in range(i + 1, len(self.objects)):
-                energy = energy - 6.67E-11 * self.objects[i].Mass * self.objects[q].Mass / np.linalg.norm(self.objects[i].Position - self.objects[q].Position)
-        return energy
+            positions[i]    = self.objects[i].Position
+            velocities[i]   = self.objects[i].Velocity
+            masses[i]       = self.objects[i].Mass
+        
+        return CalcEnergy_func(positions, velocities, masses)
     
     def CalcImpulse(self):
         impulse = np.array([0,0,0])
@@ -272,7 +237,16 @@ class ObjectSystem:
         if self.dt == 0:
             print("Oh no , dt = 0.0")
             
-            
+    # def Iteration1(self):
+    #     data = Iteration_func(self.objects, self.T, self.dt, self.Ts, self.dts, self.MaxEnergyDiviation, self.TimeStepCorrection)
+        
+    #     self.objects    = data[0]
+    #     self.T          = data[1]
+    #     self.dt         = data[2]
+    #     self.Ts         = data[3]
+    #     self.dts        = data[4]
+        
+        
     def IterateTime(self, Time):
         Time = self.T + Time
         
@@ -282,59 +256,6 @@ class ObjectSystem:
         for obj in self.objects:
             obj.ForceUpdateTrajectory(self.T)
     
-    #------------------------------------------------------------------------------------------------------------------------
-    
-    def DraftIteration(self):
-        Energy1 = self.CalcEnergy()
-        
-        
-        Forces = self.CalcForces()
-        
-        for i in range(len(self.objects)):
-            self.objects[i].Velocity = self.objects[i].Velocity + (Forces[i] / self.objects[i].Mass) * self.dt
-            self.objects[i].Position = self.objects[i].Position + self.objects[i].Velocity * self.dt + 0.5 * (Forces[i] / self.objects[i].Mass) * self.dt * self.dt
-            self.objects[i].UpdateTrajectory(self.T)
-            self.T = self.T + self.dt
-        
-        
-        Energy2 = self.CalcEnergy()
-        
-        EnergyDiviation = 2.0 * abs((Energy1 - Energy2) / (Energy1 + Energy2))
-        #print("Energy Diviation:", EnergyDiviation)
-        if EnergyDiviation > self.MaxEnergyDiviation:
-            self.dt /= self.TimeStepCorrection
-        else:
-            self.dt *= self.TimeStepCorrection
-            
-    def DraftIterateTime(self, Time):
-        Time = self.T + Time
-        
-        while self.T <= Time:
-            self.DraftIteration()
-            
-        for obj in self.objects:
-            obj.ForceUpdateTrajectory(self.T)
-        
-    #------------------------------------------------------------------------------------------------------------------------
-    
-    def SimpleIteration(self, dt):
-        Forces = self.CalcForces()
-        
-        for i in range(len(self.objects)):
-            self.objects[i].Velocity = self.objects[i].Velocity + (Forces[i] / self.objects[i].Mass) * dt
-            self.objects[i].Position = self.objects[i].Position + self.objects[i].Velocity * dt + 0.5 * (Forces[i] / self.objects[i].Mass) * dt * dt
-            self.objects[i].UpdateTrajectory(self.T)
-            self.T = self.T + dt
-            
-    def SimpleIterateTime(self, Time, dt):
-        Time = self.T + Time
-        
-        while self.T <= Time:
-            self.SimpleIteration(dt)
-            
-        for obj in self.objects:
-            obj.ForceUpdateTrajectory(self.T)
-            
     #------------------------------------------------------------------------------------------------------------------------    
     
     def print_objects(self):

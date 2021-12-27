@@ -41,16 +41,27 @@ def rand_xy(ispositive = 0, maximum=3):
     else:
         return ( (maximum*random(), maximum*random()) )       
 
+def rand_xyz (isflat = 0, maximum=3):
+    """
+    Generates pair of random pumbers in:
+        (-maximim, maximum) ispositive = 0            
+        (   0    , maximum) ispositive = 1
+    """
+    if isflat == 0:
+        return( ( (maximum * (2 * random() - 1)), (maximum * (2 * random() - 1)), (maximum * (2 * random() - 1)) )) 
+    else:
+        return ( (maximum * (2 * random() - 1)), (maximum * (2 * random() - 1)), 0 )  
+    
 class Star():
     """
     Class desribes star. 
     Placed in (0,0) and has 10^3 kg mass, if doesn't mentioned another
     """
 
-    def __init__(self, mass: float = 1e3, xy=(0, 0)):
+    def __init__(self, mass: float = 1e3, p = (0, 0, 0)):
         self.exist = 1
         self.mass = mass
-        self.vec_p = np.array(xy)
+        self.vec_p = np.array(p)
 
     def getMass(self):
         return self.mass
@@ -68,7 +79,7 @@ class CosmicBody():
     V[m/s]
     """
 
-    def __init__(self, mass: float = 10, vec_p=(0, 1000), vec_v=(0, 0)):
+    def __init__(self, mass: float = 10, vec_p=(0, 1000), vec_v=(0, 0, 0)):
         self.exist = 1
         self.mass = mass
         self.vec_p = np.array(vec_p)
@@ -77,7 +88,7 @@ class CosmicBody():
     def destroy(self):
         self.exist = 0
         self.mass = 0
-        self.vec_v = (0, 0)
+        self.vec_v = (0, 0, 0)
 
     def distance(self, body):
         return (body.vec_p - self.vec_p)
@@ -146,13 +157,13 @@ if __name__ == '__main__':
         P[m]
         V[m/sec]
         """
-        velosity = [(3.2, 0), (0.27, 0), (3.9, 0)]
+        velosity = [(3.2, 0, 0), (0.27, 0, 0), (3.9, 0, 0)]
         plt.show()
         plt.plot(0,0,'o--', color = 'y')
         for i in (0, 1, 2):
 
             Sun = Star()
-            Aster = CosmicBody(0.1, (0, 1000), velosity[i])
+            Aster = CosmicBody(0.1, (0, 1000, 0), velosity[i])
             x = [Aster.getPosition()[0]]
             y = [Aster.getPosition()[1]]
             dt = 0.2
@@ -176,9 +187,9 @@ if __name__ == '__main__':
         spining araound each other
 
         """
-        velosity = [(2, 0), (-3, 0)]
-        Ast1 = CosmicBody(12, (0, 0), velosity[0])
-        Ast2 = CosmicBody(16, (0, 5), velosity[1])
+        velosity = [(2, 0, 0), (-3, 0, 0)]
+        Ast1 = CosmicBody(12, (0, 0, 0), velosity[0])
+        Ast2 = CosmicBody(16, (0, 5, 0), velosity[1])
         x1 = [Ast1.getPosition()[0]]
         y1 = [Ast1.getPosition()[1]]
         x2 = [Ast2.getPosition()[0]]
@@ -216,9 +227,9 @@ if __name__ == '__main__':
         Time of discretiation should be small enough
 
         """
-        velosity = [(0.1, 0), (-0.1, 0)]
-        Ast1 = CosmicBody(12, (0, 0), velosity[0])
-        Ast2 = CosmicBody(5, (0, 8), velosity[1])
+        velosity = [(0.1, 0, 0), (-0.1, 0, 0)]
+        Ast1 = CosmicBody(12, (0, 0, 0), velosity[0])
+        Ast2 = CosmicBody(5, (0, 8, 0), velosity[1])
         x1 = [Ast1.getPosition()[0]]
         y1 = [Ast1.getPosition()[1]]
         x2 = [Ast2.getPosition()[0]]
@@ -254,10 +265,10 @@ if __name__ == '__main__':
         and in random point with x,y in (-3, 3)
         
         """
-        velosity = [rand_xy(), rand_xy(), rand_xy()]
+        velosity = [rand_xyz(1), rand_xyz(1), rand_xyz(1)]
         Ast = [0, 0, 0]
         for i in range(3):
-            Ast[i] = CosmicBody(random()*3, rand_xy(), velosity[i])
+            Ast[i] = CosmicBody(random()*3, rand_xyz(1), velosity[i])
         
         x = [0, 0, 0]
         y = [0, 0, 0]
@@ -301,9 +312,8 @@ if __name__ == '__main__':
     def test_trajectory():
         
         Sun = Star()
-        velosity = rand_xy(0, 10)
-        print(velosity)
-        coordinates = rand_xy(0, 1000)
+        velosity = rand_xyz(1, 10)
+        coordinates = rand_xyz(1, 1000)
         mass = 0.1
         energy = mass * ((Norm(velosity)**2/ 2 - G*Sun.getMass()/Norm(coordinates)))
         if fabs(energy) < 0.00001:
@@ -333,22 +343,20 @@ if __name__ == '__main__':
         plt.plot(0, 0, 'o--', color = 'y')
         
     def test_Star():
-        Sun = Star(35, (3, 9))
+        Sun = Star(35, (3, 9, 0))
         assert Sun.getMass() == 35
         # print (Sun.getPosition())
         print("test_Star is Ok")
 
     def test_Body():
-        Tesla_Roadster = CosmicBody(1814, (0, 6400), (7.91, 0))
+        Tesla_Roadster = CosmicBody(1814, (0, 6400, 0), (7.91, 0, 0))
         assert Tesla_Roadster.getMass() == 1814
         # print (Tesla_Roadster.getPosition())
         # print (Tesla_Roadster.getVelosity())
         print("Test Tesla Motorspots is Ok")
 
     test_2DMotion_StarBody()
-    # test_2DMotion_2Bodies()
-    # test_destruction()
-    # test_3randomBodies()
+    test_2DMotion_2Bodies()
+    test_destruction()
+    test_3randomBodies()
     test_trajectory()
-    test_Star()
-    test_Body()

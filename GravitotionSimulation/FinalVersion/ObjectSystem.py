@@ -47,7 +47,44 @@ def CalcEnergy_func(positions, velocities, masses):
             energy = energy - 6.67E-11 * masses[i] * masses[q] / np.linalg.norm(positions[i] - positions[q])
     return energy
 
-
+@jit(nopython=True)
+def Iteration_func(T, dt, Ts, dts, positions, velocities, masses, MaxEnergyDiviation, TimeStepCorrection):
+        
+    Forces = CalcForces_func(positions, masses)
+    
+    T = T + dt
+        
+    for i in range(len(Forces)):
+            
+        while T > Ts[i] + dts[i]:
+                
+            Energy1 = CalcEnergy_func(positions, velocities, masses)
+                
+            velocities[i] = velocities[i] + (Forces[i] / masses[i]) * dts[i]
+            positions[i]  = positions[i] + velocities[i] * dts[i] + 0.5 * (Forces[i] / masses[i]) * dts[i] * dts[i]
+            Ts[i] = Ts[i] + dts[i]
+                
+            Energy2 = CalcEnergy_func(positions, velocities, masses)
+                
+            EnergyDiviation = 2.0 * abs((Energy1 - Energy2) / (Energy1 + Energy2))
+                
+            if EnergyDiviation > MaxEnergyDiviation:
+                dts[i] /= TimeStepCorrection
+            else:
+                dts[i] *= TimeStepCorrection
+                
+    data = np.zeros((3, len(Forces), 3)) 
+    data[0] = positions
+    data[1] = velocities
+    for i in range(len(Forces)):
+        data[2][i][0] = Ts[i]
+        data[2][i][1] = dts[i]
+        
+    return data
+    
+    
+    
+    
 
 
 
@@ -208,7 +245,7 @@ class ObjectSystem:
         
     #------------------------------------------------------------------------------------------------------------------------
     
-    def Iteration(self):
+    def OldIteration(self):
         Forces = self.CalcForces()
         
         self.T = self.T + self.dt
@@ -233,19 +270,34 @@ class ObjectSystem:
                 else:
                     self.dts[i] *= self.TimeStepCorrection
             
-        self.dt = min(self.dts)
-        if self.dt == 0:
-            print("Oh no , dt = 0.0")
+        self.dt = np.amin(self.dts)
+    
+    def Iteration(self):
+        positions   = np.zeros((len(self.objects), 3))
+        velocities  = np.zeros((len(self.objects), 3))
+        masses      = np.zeros(len(self.objects))
+        Ts          = np.zeros(len(self.objects))
+        dts         = np.zeros(len(self.objects))
+        
+        for i in range(len(self.objects)):
+            positions[i]    = self.objects[i].Position
+            velocities[i]   = self.objects[i].Velocity
+            masses[i]       = self.objects[i].Mass
+            Ts[i]           = self.Ts[i]
+            dts[i]          = self.dts[i]
+        
+        data = Iteration_func(self.T, self.dt, Ts, dts, positions, velocities, masses, self.MaxEnergyDiviation, self.TimeStepCorrection)
+        
+        self.T = self.T + self.dt
+        
+        for i in range(len(self.objects)):
+            self.objects[i].Position = data[0][i]
+            self.objects[i].Velocity = data[1][i]
+            self.Ts[i]               = data[2][i][0]
+            self.dts[i]              = data[2][i][1]
+            self.objects[i].UpdateTrajectory(self.Ts[i])
             
-    # def Iteration1(self):
-    #     data = Iteration_func(self.objects, self.T, self.dt, self.Ts, self.dts, self.MaxEnergyDiviation, self.TimeStepCorrection)
-        
-    #     self.objects    = data[0]
-    #     self.T          = data[1]
-    #     self.dt         = data[2]
-    #     self.Ts         = data[3]
-    #     self.dts        = data[4]
-        
+        self.dt = np.amin(self.dts)
         
     def IterateTime(self, Time):
         Time = self.T + Time

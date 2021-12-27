@@ -6,6 +6,7 @@ Created on Sun Dec 26 14:16:23 2021
 """
 import numpy as np
 import matplotlib.pyplot as plt
+from random import random
 
 """
 Constants and smth
@@ -158,6 +159,11 @@ if __name__ == '__main__':
             plt.plot(x, y, '--', linewidth=1)
 
     def test_2DMotion_2Bodies():
+        """
+        2D discrete morion of 2 Cosmic Bodies. Parametres chosen to demonstrate their 
+        spining araound each other
+
+        """
         velosity = [(2, 0), (-3, 0)]
         Ast1 = CosmicBody(12, (0, 0), velosity[0])
         Ast2 = CosmicBody(16, (0, 5), velosity[1])
@@ -189,6 +195,15 @@ if __name__ == '__main__':
         plt.plot(x2, y2, '--', linewidth=1)
 
     def test_destruction():
+        """
+        Demonstration of destruction of 2 bodies.
+        -------
+        
+        !WARNING!
+        
+        Time of discretiation should be small enough
+
+        """
         velosity = [(0.1, 0), (-0.1, 0)]
         Ast1 = CosmicBody(12, (0, 0), velosity[0])
         Ast2 = CosmicBody(5, (0, 8), velosity[1])
@@ -220,12 +235,68 @@ if __name__ == '__main__':
         plt.plot(x2, y2, 'o--', linewidth=1)
         assert Ast1.exist == 0
         print("Test Destruction is Ok")
+        
+    def rand_xy(ispositive = 0, maximum=3):
+        if ispositive == 0:
+            return( ( (maximum * (2 * random() - 1)), (maximum * (2 * random() - 1)))) 
+        else:
+            return ( (maximum*random(), maximum*random()) )            
+                   
+    def test_3randomBodies():
+        """
+        Generates 3 bodies random velosity from -3 to 3 with random mass from 0 to 3
+        and in random point with x,y in (-3, 3)
+        
+        """
+        velosity = [rand_xy(), rand_xy(), rand_xy()]
+        Ast = [0, 0, 0]
+        for i in range(3):
+            Ast[i] = CosmicBody(random()*3, rand_xy(), velosity[i])
+        
+        x = [0, 0, 0]
+        y = [0, 0, 0]
+        for i in range(3):
+            x[i] = [Ast[i].getPosition()[0]]
+            y[i] = [Ast[i].getPosition()[1]]
 
+        dt = 0.001
+        n = 10000
+        t = 0
+        while t < dt*n:
+            for i in range(3):
+                Ast[i].grav(dt, Ast[(i+1) % 3], Ast[(i+2) % 3])
+            
+            for i in range(3):
+                    Ast[i].move(dt)
+            
+            for i in range(3):
+                x[i].append(Ast[i].getPosition()[0])
+                y[i].append(Ast[i].getPosition()[1])
+            
+
+            if (Norm(Ast[0].distance(Ast[1])) <= 0.02):
+                Ast[0].destroy()
+                Ast[1].destroy()
+                
+            if (Norm(Ast[2].distance(Ast[1])) <= 0.02):
+                Ast[2].destroy()
+                Ast[1].destroy()
+            
+            if (Norm(Ast[2].distance(Ast[0])) <= 0.05):
+                Ast[2].destroy()
+                Ast[0].destroy()
+
+            t = t + dt
+        plt.show()
+        
+        for i in range(3):
+            plt.plot(x[i], y[i], '--', linewidth=1)
+        
+        
     def test_Star():
         Sun = Star(35, (3, 9))
         assert Sun.getMass() == 35
         # print (Sun.getPosition())
-        # assert Sun.getPosition() == (3,9)
         print("test_Star is Ok")
 
     def test_Body():
@@ -238,5 +309,6 @@ if __name__ == '__main__':
     # test_2DMotion_StarBody()
     # test_2DMotion_2Bodies()
     # test_destruction()
+    # test_3randomBodies()
     test_Star()
     test_Body()

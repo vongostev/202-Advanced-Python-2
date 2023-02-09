@@ -8,20 +8,11 @@ Created on Sat Nov 27 22:04:56 2021
 import sys
 import numpy as np
 from scipy.linalg import lstsq
-from logging import Logger, StreamHandler, Formatter
+from loguru import logger as log
 from time import perf_counter
 
 __all__ = ('deconstruct_image', 'construct_image',
            'dct_matrix', 'filter_img_dct')
-
-log = Logger('dct.imgs.it')
-
-# handler = StreamHandler(sys.stdout)
-# handler.setLevel(30)
-# formatter = Formatter(
-#     '%(asctime)s - %(name)-10.12s [%(levelname)-7.7s]  %(message)s')
-# handler.setFormatter(formatter)
-# log.addHandler(handler)
 
 
 def deconstruct_image(

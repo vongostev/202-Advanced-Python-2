@@ -8,8 +8,8 @@ import numpy as np
 import unittest
 from cv2 import imread
 from scipy.fft import dct
-import process_images as test
-import process_images_iterative as test_iter
+import _process_images as test
+import _process_images_iterative as test_iter
 import _process_images as good
 import _process_images_iterative as good_iter
 

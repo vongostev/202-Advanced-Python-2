@@ -7,20 +7,11 @@ Created on Sat Nov 27 22:04:56 2021
 
 import sys
 import numpy as np
-from logging import Logger, StreamHandler, Formatter
+from loguru import logger as log
 from time import perf_counter
 from joblib import Parallel, delayed
 from cv2 import imread
 from numba import njit, prange
-
-log = Logger('dct.imgs.it')
-
-handler = StreamHandler(sys.stdout)
-handler.setLevel(10)
-formatter = Formatter(
-    '%(asctime)s - %(name)-10.12s [%(levelname)-7.7s]  %(message)s')
-handler.setFormatter(formatter)
-log.addHandler(handler)
 
 
 @njit('float64[:, :](UniTuple(int64, 2), int64)',

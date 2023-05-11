@@ -1,0 +1,70 @@
+\documentclass[12pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage{graphicx}
+\title{Dirichlet's integral}
+\author{\textbf{Andrey Volynets}}
+\date{May 1st 2023}
+
+\begin{document}
+\maketitle
+To start our journey in the world of \textit{non-elementary integrals} we have to first take a look at the \emph{\textbf{Dirichlet's}} integral below
+\begin{equation}
+\int_0^{+\infty}\frac{sin(\gamma x)}{x}dx
+\end{equation}
+which converges at 0 due to the equivalence $x \sim sin x$ with $\gamma$ being arbitrary and converges at infinity because the sum 
+\[\sum_{n=1}^{+\infty} \int_{\frac{\pi (n-1)}{\gamma}}^{\frac{\pi n}{\gamma}}\frac{sin(\gamma x)}{x}dx\]
+converges with $\gamma \neq 0$ by the \emph{Leibniz} alternating series test. The case in which $\gamma=0$ is trivial \cite{litlink2}
+
+Let's take a look at a similar looking integral
+\[I(y)=\int_0^{+\infty}\frac{sin(x)}{x}e^{-y x}dx\]
+which uniformly converges everywhere by the test of \emph{Abel}, the function inside the integral are continuous everywhere on the real numbers line and the derivative of the inside function also uniformly converges at any point. Thus, we can take the derivative of the function at hand and the following equation holds true. \cite{litlink1}
+\begin{equation}
+    I'(y)=-\int_0^{+\infty}\sin(x) e^{-y x}dx
+\end{equation}
+By using integration by parts:
+\[
+    -y\int_0^{+\infty}\sin(x) e^{-y x}dx = -y \left( \frac{e^{-y x}}{-y} sin x \Biggr|_{0}^{+\infty} + \frac{1}{y}\int_0^{+\infty}e^{-y x} cos(x) dx
+    \right) =
+    \]
+    \[
+    = -\left( \frac{e^{-y x}}{-y} cos x \Biggr|_{0}^{+\infty} -\frac{1}{y}\int_0^{+\infty}e^{-y x} sin (x) dx
+    \right) = -\frac{1}{y} - \frac{1}{y} I'(y) = yI'(y) 
+    \]
+thus
+
+\[I'(y)=-\frac{1}{1+y^2}\]
+and by integrating the equation:
+\[I(y) = -arctg(y) + C
+\]
+and we can find the constant by taking the limit as \emph{y} approaches $+\infty$ 
+\[\lim_{y \to {+\infty}} I(y)= 0 = -\frac{\pi}{2} + C\]
+thus
+\[I(y)=-arctg(y)+\frac{\pi}{2}\]
+and, in particular \cite{litlink3}
+\[I(0)=\int_0^{+\infty}\frac{sin(x)}{x}dx=\frac{\pi}{2}\] 
+Now, to finish things off, we have to evaluate the integral in (1), which is trivial:
+\[
+(1) = \int_0^{+\infty}\frac{sin(\gamma x)}{\gamma x}\gamma dx
+=^{^{t=\gamma x}} sign(\gamma) \int_0^{+\infty}\frac{sin(t)}{t} dt = sign(\gamma)\frac{\pi}{2}
+\]
+\begin{figure}[h]
+
+\centering
+
+\includegraphics[width=0.8\linewidth]{graph.jpg}
+
+\caption{Graph of function sin(x)/x}
+
+\label{fig:mpr}
+
+\end{figure}
+
+
+\begin{thebibliography}{}
+    \bibitem{litlink1}   Iliyn V. A. Pozniak E. G. (2005) Osnovy matematicheskogo analyza. Chast 2. [Basics of calculus. Part 2]. Moscow: Nauka Publ.
+    \bibitem{litlink2}   Phichtengolz G. M. (2003) Kurs differentsialnogo i integralnogo ischislenia. Chast 3 [Course of calculus. Part 3]. Moscow: Nauka Publ.
+    \bibitem{litlink3}   Zorich V. A.(2019)   Matematicheskyi Analiz. Chast 2 [Calculus. Part 2]. Moscow: MCNMO Publ.
+\end{thebibliography}
+
+
+\end{document}
